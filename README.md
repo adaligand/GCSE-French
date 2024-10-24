@@ -16,7 +16,7 @@
    Bâtiments: <a href="https://adaligand.github.io/GCSE-French/Education/batimentaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/batimentdict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
   <p>
-    Règlement: <a href="https://adaligand.github.io/GCSE-French/Education/rulesaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/rulesdict.html.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
+    Règlement: <a href="https://adaligand.github.io/GCSE-French/Education/rulesaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/rulesdict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
 </details>
  
