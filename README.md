@@ -1,22 +1,22 @@
 <details>
   <summary>Module 1 - Mon école</summary>
   <p>
-   Les matières: <a href="https://adaligand.github.io/GCSE-French/Education/matierealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/matieredict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/matiereread.html">Reading</a>
+   Les matières: <a href="https://adaligand.github.io/GCSE-French/Education/subjectsaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/subjectsdict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
   <p>
-    L'heure: <a href="https://adaligand.github.io/GCSE-French/Education/heurealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/heuredict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/heureread.html">Reading</a>
+    L'heure: <a href="https://adaligand.github.io/GCSE-French/Education/timealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/timedict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
   <p>
-    Emploi du temps: <a href="https://adaligand.github.io/GCSE-French/Education/timetablealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/timetabledict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/timetableread.html">Reading</a>
+    Emploi du temps: <a href="https://adaligand.github.io/GCSE-French/Education/timetablealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/timetabledict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
   <p>
-   Uniforme: <a href="https://adaligand.github.io/GCSE-French/Education/uniformealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/uniformedict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/uniformeread.html">Reading</a>
+   Uniforme: <a href="https://adaligand.github.io/GCSE-French/Education/uniformealoud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/uniformedict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
    <p>
-   Bâtiments: <a href="https://adaligand.github.io/GCSE-French/Education/batimentaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/batimentdict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/batimentread.html">Reading</a>
+   Bâtiments: <a href="https://adaligand.github.io/GCSE-French/Education/batimentaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/batimentdict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
   <p>
-    Règlement: <a href="https://adaligand.github.io/GCSE-French/Education/reglementaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/reglementdict.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/reglementread.html">Reading</a>
+    Règlement: <a href="https://adaligand.github.io/GCSE-French/Education/rulesaloud.html">Read aloud</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/rulesdict.html.html">Dictation</a>&nbsp;<a href="https://adaligand.github.io/GCSE-French/Education/">Reading</a>
   </p>
 </details>
  
