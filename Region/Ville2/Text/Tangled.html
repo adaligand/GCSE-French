@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tangled Translation</title>
   <style>
     body {
@@ -68,6 +68,7 @@
       border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s ease-in-out;
+      margin-top: 0.75rem;
     }
     button:hover {
       background-color: #A9A9A9;
@@ -83,9 +84,13 @@
       font-size: 0.95rem;
       white-space: pre-wrap;
     }
+    /* Make buttons container flex with spacing */
     .button-container {
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
       padding: 1rem;
+      flex-wrap: wrap;
     }
   </style>
 </head>
@@ -99,11 +104,12 @@
       <textarea id="frenchInput"></textarea>
       <div class="feedback" id="frenchFeedback"></div>
       <div class="result-box" id="frenchResult"></div>
+      <button onclick="checkFrench()">Check French</button>
     </div>
 
     <!-- Hybrid Sentence -->
     <div class="center-text">
-     In ma town, il y a a lot of choses to do et to see. On peut go au shopping center où there are de nombreux clothing stores et un big parking. There is aussi a beautiful bibliothèque near la mairie and un grand hospital. Pour s'amuser, there is une discothèque and a plage magnifique. In my quartier, there is une piscine and un château, but il n'y a pas any church ou any post office. Les transports en commun is trop expensive et there is beaucoup de traffic, donc it is très noisy. Malheureusement, there is rien to do pour les jeunes.
+      In ma town, il y a a lot of choses to do et to see. On peut go au shopping center où there are de nombreux clothing stores et un big parking. There is aussi a beautiful bibliothèque near la mairie and un grand hospital. Pour s'amuser, there is une discothèque and a plage magnifique. In my quartier, there is une piscine and un château, but il n'y a pas any church ou any post office. Les transports en commun is trop expensive et there is beaucoup de traffic, donc it is très noisy. Malheureusement, there is rien to do pour les jeunes.
     </div>
 
     <!-- English Input -->
@@ -112,11 +118,8 @@
       <textarea id="englishInput"></textarea>
       <div class="feedback" id="englishFeedback"></div>
       <div class="result-box" id="englishResult"></div>
+      <button onclick="checkEnglish()">Check English</button>
     </div>
-  </div>
-
-  <div class="button-container">
-    <button onclick="checkAnswers()">Check Answers</button>
   </div>
 
   <script>
@@ -138,38 +141,52 @@
       return { highlighted, mistakeCount };
     }
 
-    function checkAnswers() {
-      const userFrench = document.getElementById('frenchInput').value.trim();
-      const userEnglish = document.getElementById('englishInput').value.trim();
+    function checkFrench() {
+  const userFrench = document.getElementById('frenchInput').value.trim();
+  const frenchFeedback = document.getElementById('frenchFeedback');
+  const frenchResult = document.getElementById('frenchResult');
 
-      const frenchFeedback = document.getElementById('frenchFeedback');
-      const englishFeedback = document.getElementById('englishFeedback');
-
-      const frenchResult = document.getElementById('frenchResult');
-      const englishResult = document.getElementById('englishResult');
-
-      if (userFrench.toLowerCase() === correctFrench.toLowerCase()) {
-        frenchFeedback.textContent = '✅ Correct';
-        frenchFeedback.style.color = 'green';
-        frenchResult.innerHTML = '';
-      } else {
-        const { highlighted, mistakeCount } = highlightMistakes(userFrench, correctFrench);
-        frenchFeedback.textContent = `❌ ${mistakeCount} mistake(s)`;
-        frenchFeedback.style.color = 'red';
-        frenchResult.innerHTML = highlighted;
-      }
-
-      if (userEnglish.toLowerCase() === correctEnglish.toLowerCase()) {
-        englishFeedback.textContent = '✅ Correct';
-        englishFeedback.style.color = 'green';
-        englishResult.innerHTML = '';
-      } else {
-        const { highlighted, mistakeCount } = highlightMistakes(userEnglish, correctEnglish);
-        englishFeedback.textContent = `❌ ${mistakeCount} mistake(s)`;
-        englishFeedback.style.color = 'red';
-        englishResult.innerHTML = highlighted;
-      }
+  if (userFrench.toLowerCase() === correctFrench.toLowerCase()) {
+    frenchFeedback.textContent = '✅ Correct';
+    frenchFeedback.style.color = 'green';
+    frenchResult.innerHTML = '';
+  } else {
+    const { highlighted, mistakeCount } = highlightMistakes(userFrench, correctFrench);
+    if (mistakeCount === 0) {
+      frenchFeedback.textContent = '✅ Correct';
+      frenchFeedback.style.color = 'green';
+      frenchResult.innerHTML = highlighted;
+    } else {
+      frenchFeedback.textContent = `❌ ${mistakeCount} mistake(s)`;
+      frenchFeedback.style.color = 'red';
+      frenchResult.innerHTML = highlighted;
     }
+  }
+}
+
+function checkEnglish() {
+  const userEnglish = document.getElementById('englishInput').value.trim();
+  const englishFeedback = document.getElementById('englishFeedback');
+  const englishResult = document.getElementById('englishResult');
+
+  if (userEnglish.toLowerCase() === correctEnglish.toLowerCase()) {
+    englishFeedback.textContent = '✅ Correct';
+    englishFeedback.style.color = 'green';
+    englishResult.innerHTML = '';
+  } else {
+    const { highlighted, mistakeCount } = highlightMistakes(userEnglish, correctEnglish);
+    if (mistakeCount === 0) {
+      englishFeedback.textContent = '✅ Correct';
+      englishFeedback.style.color = 'green';
+      englishResult.innerHTML = highlighted;
+    } else {
+      englishFeedback.textContent = `❌ ${mistakeCount} mistake(s)`;
+      englishFeedback.style.color = 'red';
+      englishResult.innerHTML = highlighted;
+    }
+  }
+}
+
   </script>
 </body>
 </html>
