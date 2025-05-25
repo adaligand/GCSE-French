@@ -75,87 +75,47 @@
 <script>
   // Full set of pairs (shortened example, replace with full data)
   const pairs = [
-    {eng: "It is", fr: "C’est"},
-    {eng: "well located,", fr: "bien situé,"},
-    {eng: "near the beach", fr: "près de la plage"},
-    {eng: "and the town center,", fr: "et du centre-ville,"},
-    {eng: "which is", fr: "ce qui est"},
-    {eng: "convenient", fr: "pratique"},
-    {eng: "for a holiday.", fr: "pour les vacances."},
-    {eng: "In the room,", fr: "Dans la chambre,"},
-    {eng: "there was", fr: "il y avait"},
-    {eng: "a large window", fr: "une grande fenêtre"},
-    {eng: "with a view", fr: "avec une vue"},
-    {eng: "of the sea,", fr: "sur la mer,"},
-    {eng: "which was", fr: "ce qui était"},
-    {eng: "beautiful.", fr: "magnifique."},
-    {eng: "However,", fr: "Cependant,"},
-    {eng: "I had to", fr: "j’ai dû"},
-    {eng: "carry", fr: "porter"},
-    {eng: "my suitcases", fr: "mes valises"},
-    {eng: "myself", fr: "moi-même"},
-    {eng: "because", fr: "car"},
-    {eng: "the service", fr: "le service"},
-    {eng: "was not", fr: "n’était pas"},
-    {eng: "included", fr: "inclus"},
-    {eng: "in the price,", fr: "dans le prix,"},
-    {eng: "which I", fr: "ce que"},
-    {eng: "found", fr: "j’ai trouvé"},
-    {eng: "disappointing.", fr: "décevant."},
-    {eng: "Moreover,", fr: "De plus,"},
-    {eng: "the hairdryer", fr: "le sèche-cheveux"},
-    {eng: "didn’t work,", fr: "ne marchait pas,"},
-    {eng: "so", fr: "alors"},
-    {eng: "I had to", fr: "j’ai dû"},
-    {eng: "complain", fr: "me plaindre"},
-    {eng: "at the reception,", fr: "à la réception,"},
-    {eng: "but", fr: "mais"},
-    {eng: "it was", fr: "c’était"},
-    {eng: "difficult", fr: "difficile"},
-    {eng: "because", fr: "car"},
-    {eng: "my French", fr: "mon français"},
-    {eng: "isn’t", fr: "n’est pas"},
-    {eng: "perfect.", fr: "parfait."},
-    {eng: "Neither", fr: "Ni"},
-    {eng: "the air conditioning", fr: "la climatisation"},
-    {eng: "nor", fr: "ni"},
-    {eng: "the Wi-Fi", fr: "le Wi-Fi"},
-    {eng: "worked", fr: "ne fonctionnaient"},
-    {eng: "properly,", fr: "correctement,"},
-    {eng: "which", fr: "ce qui"},
-    {eng: "made", fr: "rendait"},
-    {eng: "the stay", fr: "le séjour"},
-    {eng: "frustrating.", fr: "frustrant."},
-    {eng: "I wanted", fr: "J’ai voulu"},
-    {eng: "to rest,", fr: "me reposer,"},
-    {eng: "but", fr: "mais"},
-    {eng: "the room", fr: "la chambre"},
-    {eng: "was", fr: "était"},
-    {eng: "dark", fr: "sombre"},
-    {eng: "and", fr: "et"},
-    {eng: "noisy,", fr: "bruyante,"},
-    {eng: "so", fr: "alors"},
-    {eng: "it was", fr: "c’était"},
-    {eng: "impossible.", fr: "impossible."},
-    {eng: "Fortunately,", fr: "Heureusement,"},
-    {eng: "I was able", fr: "j’ai pu"},
-    {eng: "to find", fr: "trouver"},
-    {eng: "free parking", fr: "un parking gratuit"},
-    {eng: "near", fr: "près"},
-    {eng: "the hotel,", fr: "de l’hôtel,"},
-    {eng: "but", fr: "mais"},
-    {eng: "the value", fr: "le rapport"},
-    {eng: "for money", fr: "qualité-prix"},
-    {eng: "was not", fr: "n’était pas"},
-    {eng: "good.", fr: "bon."},
-    {eng: "In summary,", fr: "En résumé,"},
-    {eng: "although", fr: "bien que"},
-    {eng: "the staff", fr: "le personnel"},
-    {eng: "were", fr: "soit"},
-    {eng: "kind,", fr: "gentil,"},
-    {eng: "I", fr: "je"},
-    {eng: "wouldn’t recommend", fr: "ne recommanderais pas"},
-    {eng: "this hotel.", fr: "cet hôtel."}
+{eng: "I  would prefer ", fr: "Je préférerais"}
+{eng: "relaxing holidays  ", fr: " des vacances reposantes"}
+{eng: "because  ", fr: "parce que"}
+{eng: "I  like", fr: "j'aime"}
+{eng: "to unwind  ", fr: "me détendre"}
+{eng: "after  ", fr: "après"}
+{eng: "a stressful year.  ", fr: "une année stressante."}
+{eng: "We  would spend  ", fr: "Nous passerions"}
+{eng: "our holidays  ", fr: "des vacances"}
+{eng: "in the countryside,  ", fr: "à la campagne,"}
+{eng: "far  ", fr: "loin"}
+{eng: "from the  noise", fr: "du bruit"}
+{eng: "of the city,  ", fr: "de la ville"}
+{eng: "and  I would rent  ", fr: "et je louerais"}
+{eng: "a comfortable holiday home.  ", fr: "un gîte confortable."}
+{eng: "It  would be  ", fr: "Ce serait"}
+{eng: "an exceptional experience,  ", fr: "une expérience exceptionnelle,"}
+{eng: "especially  ", fr: "surtout"}
+{eng: "if I could visit  ", fr: "si je pouvais visiter"}
+{eng: "beautiful cultural sites  ", fr: "de beaux sites culturels"}
+{eng: "and  eat", fr: "et manger"}
+{eng: "local food.  ", fr: "la nourriture locale."}
+{eng: "I  would prefer  ", fr: "J'aimerais mieux"}
+{eng: "cultural holidays  ", fr: "des vacances culturelles"}
+{eng: "because  ", fr: "car"}
+{eng: "there would be  ", fr: "il y aurait"}
+{eng: "so much  ", fr: "beaucoup"}
+{eng: "to learn  ", fr: "à apprendre"}
+{eng: "and to discover.  ", fr: " et à découvrir."}
+{eng: "Furthermore,  ", fr: "En plus,"}
+{eng: "it would be  very hot,  ", fr: "il ferait très chaud, "}
+{eng: "so  ", fr: "alors,"}
+{eng: "I  would spend  ", fr: "je passerais"}
+{eng: "my days  ", fr: "mes journées"}
+{eng: "at the beach  ", fr: "à la plage"}
+{eng: "to sunbathe  ", fr: " pour bronzer"}
+{eng: "and enjoy  ", fr: "et profiter"}
+{eng: "the stunning scenery.  ", fr: "des paysages magnifiques."}
+{eng: "It  would be  ", fr: "Ce seraient"}
+{eng: "an unforgettable holiday!", fr: "des vacances inoubliables!"}
+
   ];
 
   const batchSize = 10;
