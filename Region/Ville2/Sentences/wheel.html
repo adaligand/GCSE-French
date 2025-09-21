@@ -59,11 +59,17 @@ h1,h2 { text-align:center; margin:0; }
 
 <script>
 const sentences = [
-  "Tést ùn",       // French
-  "Tést deux",      // Spanish
-  "Tést trois",          // German
-  "Tést quâtrè",                 // English
-    "Javascript Game"
+"Dans ma ville Il n'y a pas de poste.",
+"Dans mon quartier Il n'y a pas d'église.",
+"Dans ma ville Il n'y a pas de commissariat.",
+"Dans mon quartier il y a un château.",
+"Dans mon village Il n'y a pas de poste.",
+"Dans mon quartier il y a une piscine.",
+"Il y a beaucoup de circulation.",
+"c'est très bruyant.",
+"Il n'y a rien à faire pour les jeunes.",
+"Les transports en commun sont trop chers."
+
 ];
 
 let currentSentence="", hidden=[], currentPlayer=1, wheelValue=0, scores={1:0,2:0}, spinning=false, canSpin=true;
@@ -261,3 +267,4 @@ document.addEventListener("keydown", e => {
 </script>
 </body>
 </html>
+
