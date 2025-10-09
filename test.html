@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Test Generator</title>
+    <title>Vocabulary List Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
@@ -98,7 +98,7 @@
 <body>
 
 <div class="container">
-    <h1 id="title">Vocabulary Test</h1>
+    <h1 id="title">Vocabulary List Generator</h1>
     <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
 
     <div id="controls-container" class="controls hide">
@@ -138,6 +138,16 @@
     const revealBtn = document.getElementById('reveal-btn');
 
     let vocabSets = {};
+
+    // Map theme numbers to their full names
+    const themeMap = {
+        '1': '1-Personal world',
+        '2': '2-Lifestyle',
+        '3': '3-Neighbourhood',
+        '4': '4-Media & Tech',
+        '5': '5-Study & future',
+        '6': '6-Travel and Tourism'
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
@@ -196,18 +206,17 @@
     });
 
     function initializeSelectors() {
-        // Get unique themes from the set names (e.g., "3" from "3.1")
         const themes = [...new Set(Object.keys(vocabSets).map(setName => setName.split('.')[0]))];
         
         themeSelect.innerHTML = '';
-        themes.sort().forEach(theme => {
+        themes.sort((a, b) => a - b).forEach(theme => { // Sort themes numerically
             const option = document.createElement('option');
             option.value = theme;
-            option.textContent = `Theme ${theme}`;
+            // Use the map to get the full name, or fall back to a default format
+            option.textContent = themeMap[theme] || `Theme ${theme}`;
             themeSelect.appendChild(option);
         });
 
-        // Populate the set dropdown for the first theme initially
         updateSetDropdown();
     }
 
@@ -215,8 +224,7 @@
         const selectedTheme = themeSelect.value;
         setSelect.innerHTML = '';
 
-        Object.keys(vocabSets).forEach(setName => {
-            // Check if the setName starts with the selected theme number
+        Object.keys(vocabSets).sort().forEach(setName => { // Sort set names alphabetically
             if (setName.startsWith(selectedTheme + '.') || setName === selectedTheme) {
                  const option = document.createElement('option');
                  option.value = setName;
@@ -245,7 +253,6 @@
             const item = testItems[i];
             const row = document.createElement('tr');
             
-            // First half of questions: Show French, hide English
             if (i < numFrenchQuestions) {
                 row.innerHTML = `
                     <td class="num-cell">${i + 1}</td>
@@ -253,7 +260,6 @@
                     <td class="answer-cell"><span class="answer">${item.english}</span></td>
                 `;
             } 
-            // Second half: Hide French, show English
             else {
                 row.innerHTML = `
                     <td class="num-cell">${i + 1}</td>
