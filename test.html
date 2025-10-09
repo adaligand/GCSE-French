@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Test Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            padding-top: 40px;
+            min-height: 100vh;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .controls, #test-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        select, input, button {
+            font-size: 1em;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #3498db;
+        }
+        #reveal-btn {
+            background-color: #27ae60;
+        }
+        #reveal-btn:hover {
+            background-color: #2ecc71;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        td input[type="text"] {
+            width: 95%;
+        }
+        .answer-cell span {
+            visibility: hidden;
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .answer-cell span.visible {
+            visibility: visible;
+        }
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="title">Vocabulary Test Generator</h1>
+    <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
+
+    <div id="controls-container" class="controls hide">
+        <label for="set-select">Choose a vocabulary set:</label>
+        <select id="set-select"></select>
+        <button id="generate-btn">Generate Test</button>
+    </div>
+
+    <div id="test-container" class="hide">
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Your Answer</th>
+                    <th>Correct Answer</th>
+                </tr>
+            </thead>
+            <tbody id="test-body"></tbody>
+        </table>
+        <div id="test-controls">
+             <button id="reveal-btn">Reveal Answers</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const loadingMessage = document.getElementById('loading-message');
+    const controlsContainer = document.getElementById('controls-container');
+    const setSelect = document.getElementById('set-select');
+    const generateBtn = document.getElementById('generate-btn');
+    const testContainer = document.getElementById('test-container');
+    const testBody = document.getElementById('test-body');
+    const revealBtn = document.getElementById('reveal-btn');
+
+    let vocabSets = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const sheetUrl = params.get('sheet');
+        if (!sheetUrl) {
+            loadingMessage.textContent = "⚠️ Please provide a Google Sheet URL in the '?sheet=' parameter.";
+            return;
+        }
+
+        Papa.parse(sheetUrl, {
+            download: true,
+            header: false,
+            skipEmptyLines: true,
+            complete: (results) => {
+                let currentSetName = null;
+                // Start from row 0 as per user's example (D1 has a name)
+                results.data.forEach(row => {
+                    const setName = row[3]; // Column D
+                    const frenchWord = row[4]; // Column E
+                    const englishWord = row[5]; // Column F
+
+                    // If there's a new set name in Column D, update the current set
+                    if (setName && setName.trim() !== '') {
+                        currentSetName = setName.trim();
+                        if (!vocabSets[currentSetName]) {
+                            vocabSets[currentSetName] = [];
+                        }
+                    }
+
+                    // If we have a current set and a valid word pair, add it
+                    if (currentSetName && frenchWord && englishWord) {
+                        vocabSets[currentSetName].push({
+                            french: frenchWord.trim(),
+                            english: englishWord.trim()
+                        });
+                    }
+                });
+
+                if (Object.keys(vocabSets).length > 0) {
+                    populateDropdown();
+                    loadingMessage.classList.add('hide');
+                    controlsContainer.classList.remove('hide');
+                } else {
+                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns D, E, and F in your sheet.";
+                }
+            },
+            error: () => {
+                loadingMessage.textContent = "⚠️ Failed to load spreadsheet. Check the URL and publish settings.";
+            }
+        });
+
+        generateBtn.addEventListener('click', generateTest);
+        revealBtn.addEventListener('click', revealAnswers);
+    });
+
+    function populateDropdown() {
+        for (const setName in vocabSets) {
+            const option = document.createElement('option');
+            option.value = setName;
+            option.textContent = `${setName} (${vocabSets[setName].length} words)`;
+            setSelect.appendChild(option);
+        }
+    }
+
+    function generateTest() {
+        const selectedSetName = setSelect.value;
+        const selectedSet = vocabSets[selectedSetName];
+        if (!selectedSet || selectedSet.length === 0) return;
+
+        // Shuffle the array and pick 10 random items
+        const shuffled = [...selectedSet].sort(() => 0.5 - Math.random());
+        const testItems = shuffled.slice(0, 10);
+
+        testBody.innerHTML = ''; // Clear previous test
+        const numFrenchQuestions = Math.min(5, Math.ceil(testItems.length / 2));
+        const numEnglishQuestions = Math.min(5, Math.floor(testItems.length / 2));
+        
+        // Generate 5 (or fewer) French to English questions
+        for (let i = 0; i < numFrenchQuestions; i++) {
+            const item = testItems[i];
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.french}</td>
+                <td><input type="text" /></td>
+                <td class="answer-cell"><span class="answer">${item.english}</span></td>
+            `;
+            testBody.appendChild(row);
+        }
+
+        // Generate 5 (or fewer) English to French questions
+        for (let i = numFrenchQuestions; i < numFrenchQuestions + numEnglishQuestions; i++) {
+            const item = testItems[i];
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.english}</td>
+                <td><input type="text" /></td>
+                <td class="answer-cell"><span class="answer">${item.french}</span></td>
+            `;
+            testBody.appendChild(row);
+        }
+
+        testContainer.classList.remove('hide');
+        revealBtn.textContent = 'Reveal Answers'; // Reset button text
+        document.querySelectorAll('.answer').forEach(span => span.classList.remove('visible')); // Ensure answers are hidden
+    }
+
+    function revealAnswers() {
+        const answers = document.querySelectorAll('.answer');
+        const isHidden = !answers[0] || !answers[0].classList.contains('visible');
+        
+        answers.forEach(span => {
+            span.classList.toggle('visible', isHidden);
+        });
+
+        revealBtn.textContent = isHidden ? 'Hide Answers' : 'Reveal Answers';
+    }
+
+</script>
+
+</body>
+</html>
