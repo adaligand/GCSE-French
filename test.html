@@ -14,6 +14,7 @@
             justify-content: center;
             padding-top: 40px;
             min-height: 100vh;
+            font-size: 18px; /* Increased base font size */
         }
         .container {
             width: 90%;
@@ -54,16 +55,16 @@
         button:hover {
             background-color: #3498db;
         }
-        #reveal-btn {
-            background-color: #27ae60;
-        }
-        #reveal-btn:hover {
-            background-color: #2ecc71;
-        }
+        #reveal-btn { background-color: #27ae60; }
+        #reveal-btn:hover { background-color: #2ecc71; }
+        #print-btn { background-color: #8e44ad; }
+        #print-btn:hover { background-color: #9b59b6; }
+        
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            font-size: 1.1em; /* Increased table font size */
         }
         th, td {
             border: 1px solid #ddd;
@@ -79,9 +80,6 @@
             font-weight: bold;
             color: #7f8c8d;
         }
-        .answer-cell {
-            min-height: 1.5em;
-        }
         .answer-cell span {
             visibility: hidden;
             color: #27ae60;
@@ -92,6 +90,30 @@
         }
         .hide {
             display: none;
+        }
+
+        /* --- PRINT STYLES --- */
+        @media print {
+            body {
+                font-size: 12pt; /* Standard print font size */
+                padding: 0;
+                margin: 0;
+            }
+            .container > *:not(#print-area) {
+                display: none !important;
+            }
+            #print-area {
+                display: block !important;
+            }
+            .print-table-wrapper {
+                height: 48vh; /* Each table wrapper takes up about half the page height */
+                page-break-inside: avoid;
+                box-sizing: border-box;
+            }
+             .print-table-wrapper h2 {
+                text-align: center;
+                font-size: 1.2em;
+             }
         }
     </style>
 </head>
@@ -123,8 +145,11 @@
         </table>
         <div id="test-controls">
              <button id="reveal-btn">Reveal Answers</button>
+             <button id="print-btn">🖨️ Print Test</button>
         </div>
     </div>
+    
+    <div id="print-area" class="hide"></div>
 </div>
 
 <script>
@@ -136,17 +161,14 @@
     const testContainer = document.getElementById('test-container');
     const testBody = document.getElementById('test-body');
     const revealBtn = document.getElementById('reveal-btn');
+    const printBtn = document.getElementById('print-btn');
+    const printArea = document.getElementById('print-area');
 
     let vocabSets = {};
 
-    // Map theme numbers to their full names
     const themeMap = {
-        '1': '1-Personal world',
-        '2': '2-Lifestyle',
-        '3': '3-Neighbourhood',
-        '4': '4-Media & Tech',
-        '5': '5-Study & future',
-        '6': '6-Travel and Tourism'
+        '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood',
+        '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism'
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -158,73 +180,60 @@
         }
 
         Papa.parse(sheetUrl, {
-            download: true,
-            header: false,
-            skipEmptyLines: true,
+            download: true, header: false, skipEmptyLines: true,
             complete: (results) => {
                 let currentSetName = null;
                 let currentSetWords = [];
 
                 results.data.forEach(row => {
-                    const setNameInRow = row[0] ? row[0].trim() : ''; // Column A
-                    const frenchWord = row[2] ? row[2].trim() : ''; // Column C
-                    const englishWord = row[3] ? row[3].trim() : ''; // Column D
+                    const setNameInRow = row[0] ? row[0].trim() : '';
+                    const frenchWord = row[2] ? row[2].trim() : '';
+                    const englishWord = row[3] ? row[3].trim() : '';
 
                     if (setNameInRow !== '') {
-                        if (currentSetName && currentSetWords.length > 0) {
-                            vocabSets[currentSetName] = currentSetWords;
-                        }
+                        if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
                         currentSetName = setNameInRow;
                         currentSetWords = [];
                     }
-
                     if (frenchWord !== '' && englishWord !== '') {
                         currentSetWords.push({ french: frenchWord, english: englishWord });
                     }
                 });
-
-                if (currentSetName && currentSetWords.length > 0) {
-                    vocabSets[currentSetName] = currentSetWords;
-                }
+                if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
                 
                 if (Object.keys(vocabSets).length > 0) {
                     initializeSelectors();
                     loadingMessage.classList.add('hide');
                     controlsContainer.classList.remove('hide');
                 } else {
-                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns A, C, and D in your sheet.";
+                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns A, C, and D.";
                 }
             },
-            error: () => {
-                loadingMessage.textContent = "⚠️ Failed to load spreadsheet. Check the URL and publish settings.";
-            }
+            error: () => { loadingMessage.textContent = "⚠️ Failed to load spreadsheet."; }
         });
 
         generateBtn.addEventListener('click', generateTest);
         revealBtn.addEventListener('click', revealAnswers);
         themeSelect.addEventListener('change', updateSetDropdown);
+        printBtn.addEventListener('click', () => window.print());
     });
 
     function initializeSelectors() {
         const themes = [...new Set(Object.keys(vocabSets).map(setName => setName.split('.')[0]))];
-        
         themeSelect.innerHTML = '';
-        themes.sort((a, b) => a - b).forEach(theme => { // Sort themes numerically
+        themes.sort((a, b) => a - b).forEach(theme => {
             const option = document.createElement('option');
             option.value = theme;
-            // Use the map to get the full name, or fall back to a default format
             option.textContent = themeMap[theme] || `Theme ${theme}`;
             themeSelect.appendChild(option);
         });
-
         updateSetDropdown();
     }
 
     function updateSetDropdown() {
         const selectedTheme = themeSelect.value;
         setSelect.innerHTML = '';
-
-        Object.keys(vocabSets).sort().forEach(setName => { // Sort set names alphabetically
+        Object.keys(vocabSets).sort().forEach(setName => {
             if (setName.startsWith(selectedTheme + '.') || setName === selectedTheme) {
                  const option = document.createElement('option');
                  option.value = setName;
@@ -244,43 +253,43 @@
         const shuffled = [...selectedSet].sort(() => 0.5 - Math.random());
         const testItems = shuffled.slice(0, 10);
 
+        // 1. Generate the on-screen table
         testBody.innerHTML = '';
-        
         const numTotalQuestions = testItems.length;
         const numFrenchQuestions = Math.ceil(numTotalQuestions / 2);
         
         for (let i = 0; i < numTotalQuestions; i++) {
             const item = testItems[i];
             const row = document.createElement('tr');
-            
             if (i < numFrenchQuestions) {
-                row.innerHTML = `
-                    <td class="num-cell">${i + 1}</td>
-                    <td>${item.french}</td>
-                    <td class="answer-cell"><span class="answer">${item.english}</span></td>
-                `;
-            } 
-            else {
-                row.innerHTML = `
-                    <td class="num-cell">${i + 1}</td>
-                    <td class="answer-cell"><span class="answer">${item.french}</span></td>
-                    <td>${item.english}</td>
-                `;
+                row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.french}</td><td class="answer-cell"><span class="answer">${item.english}</span></td>`;
+            } else {
+                row.innerHTML = `<td class="num-cell">${i + 1}</td><td class="answer-cell"><span class="answer">${item.french}</span></td><td>${item.english}</td>`;
             }
             testBody.appendChild(row);
         }
 
+        // 2. Generate the hidden print-area content
+        const tableHeaderHTML = document.querySelector('#test-container table thead').outerHTML;
+        const tableBodyHTML = testBody.innerHTML;
+        const fullTableHTML = `<h2>${selectedSetName}</h2><table>${tableHeaderHTML}${tableBodyHTML}</table>`;
+
+        printArea.innerHTML = `
+            <div class="print-table-wrapper">${fullTableHTML}</div>
+            <div class="print-table-wrapper">${fullTableHTML}</div>
+        `;
+
+        // 3. Update UI
         testContainer.classList.remove('hide');
         revealBtn.textContent = 'Reveal Answers';
         document.querySelectorAll('.answer').forEach(span => span.classList.remove('visible'));
     }
 
     function revealAnswers() {
-        const answers = document.querySelectorAll('.answer');
+        const answers = document.querySelectorAll('.answer'); // This selects from all 3 tables
         if (answers.length === 0) return;
         
         const isHidden = !answers[0].classList.contains('visible');
-        
         answers.forEach(span => {
             span.classList.toggle('visible', isHidden);
         });
