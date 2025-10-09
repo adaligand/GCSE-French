@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary List Generator</title>
+    <title>Vocabulary Test Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
@@ -34,6 +34,9 @@
             gap: 15px;
             margin: 20px 0;
             flex-wrap: wrap;
+        }
+        label {
+            font-weight: bold;
         }
         select, button {
             font-size: 1em;
@@ -77,7 +80,7 @@
             color: #7f8c8d;
         }
         .answer-cell {
-            min-height: 1.5em; /* Ensure cell has height even when empty */
+            min-height: 1.5em;
         }
         .answer-cell span {
             visibility: hidden;
@@ -95,11 +98,13 @@
 <body>
 
 <div class="container">
-    <h1 id="title">Vocabulary List Generator</h1>
+    <h1 id="title">Vocabulary Test</h1>
     <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
 
     <div id="controls-container" class="controls hide">
-        <label for="set-select">Choose a vocabulary set:</label>
+        <label for="theme-select">Theme:</label>
+        <select id="theme-select"></select>
+        <label for="set-select">Set:</label>
         <select id="set-select"></select>
         <button id="generate-btn">Generate List</button>
     </div>
@@ -125,6 +130,7 @@
 <script>
     const loadingMessage = document.getElementById('loading-message');
     const controlsContainer = document.getElementById('controls-container');
+    const themeSelect = document.getElementById('theme-select');
     const setSelect = document.getElementById('set-select');
     const generateBtn = document.getElementById('generate-btn');
     const testContainer = document.getElementById('test-container');
@@ -150,38 +156,29 @@
                 let currentSetWords = [];
 
                 results.data.forEach(row => {
-                    // Updated to new column structure
                     const setNameInRow = row[0] ? row[0].trim() : ''; // Column A
                     const frenchWord = row[2] ? row[2].trim() : ''; // Column C
                     const englishWord = row[3] ? row[3].trim() : ''; // Column D
 
-                    // Check if this row defines a new set name.
                     if (setNameInRow !== '') {
-                        // If we were already building a set, save the completed one.
                         if (currentSetName && currentSetWords.length > 0) {
                             vocabSets[currentSetName] = currentSetWords;
                         }
-                        // Start the new set.
                         currentSetName = setNameInRow;
                         currentSetWords = [];
                     }
 
-                    // If the row contains a valid word pair, add it to the current set being built.
                     if (frenchWord !== '' && englishWord !== '') {
-                        currentSetWords.push({
-                            french: frenchWord,
-                            english: englishWord
-                        });
+                        currentSetWords.push({ french: frenchWord, english: englishWord });
                     }
                 });
 
-                // After the loop, save the very last set that was being built.
                 if (currentSetName && currentSetWords.length > 0) {
                     vocabSets[currentSetName] = currentSetWords;
                 }
                 
                 if (Object.keys(vocabSets).length > 0) {
-                    populateDropdown();
+                    initializeSelectors();
                     loadingMessage.classList.add('hide');
                     controlsContainer.classList.remove('hide');
                 } else {
@@ -195,19 +192,44 @@
 
         generateBtn.addEventListener('click', generateTest);
         revealBtn.addEventListener('click', revealAnswers);
+        themeSelect.addEventListener('change', updateSetDropdown);
     });
 
-    function populateDropdown() {
-        for (const setName in vocabSets) {
+    function initializeSelectors() {
+        // Get unique themes from the set names (e.g., "3" from "3.1")
+        const themes = [...new Set(Object.keys(vocabSets).map(setName => setName.split('.')[0]))];
+        
+        themeSelect.innerHTML = '';
+        themes.sort().forEach(theme => {
             const option = document.createElement('option');
-            option.value = setName;
-            option.textContent = `${setName} (${vocabSets[setName].length} words)`;
-            setSelect.appendChild(option);
-        }
+            option.value = theme;
+            option.textContent = `Theme ${theme}`;
+            themeSelect.appendChild(option);
+        });
+
+        // Populate the set dropdown for the first theme initially
+        updateSetDropdown();
+    }
+
+    function updateSetDropdown() {
+        const selectedTheme = themeSelect.value;
+        setSelect.innerHTML = '';
+
+        Object.keys(vocabSets).forEach(setName => {
+            // Check if the setName starts with the selected theme number
+            if (setName.startsWith(selectedTheme + '.') || setName === selectedTheme) {
+                 const option = document.createElement('option');
+                 option.value = setName;
+                 option.textContent = `${setName} (${vocabSets[setName].length} words)`;
+                 setSelect.appendChild(option);
+            }
+        });
     }
 
     function generateTest() {
         const selectedSetName = setSelect.value;
+        if (!selectedSetName) return;
+
         const selectedSet = vocabSets[selectedSetName];
         if (!selectedSet || selectedSet.length === 0) return;
 
@@ -216,19 +238,22 @@
 
         testBody.innerHTML = '';
         
-        for (let i = 0; i < 10; i++) {
-            if (!testItems[i]) break;
-
+        const numTotalQuestions = testItems.length;
+        const numFrenchQuestions = Math.ceil(numTotalQuestions / 2);
+        
+        for (let i = 0; i < numTotalQuestions; i++) {
             const item = testItems[i];
             const row = document.createElement('tr');
             
-            if (i < 5) {
+            // First half of questions: Show French, hide English
+            if (i < numFrenchQuestions) {
                 row.innerHTML = `
                     <td class="num-cell">${i + 1}</td>
                     <td>${item.french}</td>
                     <td class="answer-cell"><span class="answer">${item.english}</span></td>
                 `;
             } 
+            // Second half: Hide French, show English
             else {
                 row.innerHTML = `
                     <td class="num-cell">${i + 1}</td>
