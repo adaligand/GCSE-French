@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Test Generator</title>
+    <title>Vocabulary List Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
@@ -35,7 +35,7 @@
             margin: 20px 0;
             flex-wrap: wrap;
         }
-        select, input, button {
+        select, button {
             font-size: 1em;
             padding: 10px 15px;
             border-radius: 8px;
@@ -70,8 +70,14 @@
         th {
             background-color: #f9f9f9;
         }
-        td input[type="text"] {
-            width: 95%;
+        td.num-cell {
+            width: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        .answer-cell {
+            min-height: 1.5em; /* Ensure cell has height even when empty */
         }
         .answer-cell span {
             visibility: hidden;
@@ -89,13 +95,13 @@
 <body>
 
 <div class="container">
-    <h1 id="title">Vocabulary Test Generator</h1>
+    <h1 id="title">Vocabulary List Generator</h1>
     <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
 
     <div id="controls-container" class="controls hide">
         <label for="set-select">Choose a vocabulary set:</label>
         <select id="set-select"></select>
-        <button id="generate-btn">Generate Test</button>
+        <button id="generate-btn">Generate List</button>
     </div>
 
     <div id="test-container" class="hide">
@@ -103,9 +109,9 @@
         <table>
             <thead>
                 <tr>
-                    <th>Question</th>
-                    <th>Your Answer</th>
-                    <th>Correct Answer</th>
+                    <th>No.</th>
+                    <th>French</th>
+                    <th>English</th>
                 </tr>
             </thead>
             <tbody id="test-body"></tbody>
@@ -141,29 +147,33 @@
             skipEmptyLines: true,
             complete: (results) => {
                 let currentSetName = null;
-                // Start from row 0 as per user's example (D1 has a name)
-                results.data.forEach(row => {
-                    const setName = row[3]; // Column D
-                    const frenchWord = row[4]; // Column E
-                    const englishWord = row[5]; // Column F
+                let currentSetWords = [];
 
-                    // If there's a new set name in Column D, update the current set
-                    if (setName && setName.trim() !== '') {
-                        currentSetName = setName.trim();
-                        if (!vocabSets[currentSetName]) {
-                            vocabSets[currentSetName] = [];
+                results.data.forEach(row => {
+                    const setNameInRow = row[3] ? row[3].trim() : ''; // Column D
+                    const frenchWord = row[4] ? row[4].trim() : ''; // Column E
+                    const englishWord = row[5] ? row[5].trim() : ''; // Column F
+
+                    if (setNameInRow !== '') {
+                        if (currentSetName && currentSetWords.length > 0) {
+                            vocabSets[currentSetName] = currentSetWords;
                         }
+                        currentSetName = setNameInRow;
+                        currentSetWords = [];
                     }
 
-                    // If we have a current set and a valid word pair, add it
-                    if (currentSetName && frenchWord && englishWord) {
-                        vocabSets[currentSetName].push({
-                            french: frenchWord.trim(),
-                            english: englishWord.trim()
+                    if (frenchWord !== '' && englishWord !== '') {
+                        currentSetWords.push({
+                            french: frenchWord,
+                            english: englishWord
                         });
                     }
                 });
 
+                if (currentSetName && currentSetWords.length > 0) {
+                    vocabSets[currentSetName] = currentSetWords;
+                }
+                
                 if (Object.keys(vocabSets).length > 0) {
                     populateDropdown();
                     loadingMessage.classList.add('hide');
@@ -200,30 +210,31 @@
         const testItems = shuffled.slice(0, 10);
 
         testBody.innerHTML = ''; // Clear previous test
-        const numFrenchQuestions = Math.min(5, Math.ceil(testItems.length / 2));
-        const numEnglishQuestions = Math.min(5, Math.floor(testItems.length / 2));
         
-        // Generate 5 (or fewer) French to English questions
-        for (let i = 0; i < numFrenchQuestions; i++) {
-            const item = testItems[i];
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${item.french}</td>
-                <td><input type="text" /></td>
-                <td class="answer-cell"><span class="answer">${item.english}</span></td>
-            `;
-            testBody.appendChild(row);
-        }
+        // Generate the 10 rows
+        for (let i = 0; i < 10; i++) {
+            // Stop if we run out of words
+            if (!testItems[i]) break;
 
-        // Generate 5 (or fewer) English to French questions
-        for (let i = numFrenchQuestions; i < numFrenchQuestions + numEnglishQuestions; i++) {
             const item = testItems[i];
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${item.english}</td>
-                <td><input type="text" /></td>
-                <td class="answer-cell"><span class="answer">${item.french}</span></td>
-            `;
+            
+            // First 5 rows: Show French, hide English
+            if (i < 5) {
+                row.innerHTML = `
+                    <td class="num-cell">${i + 1}</td>
+                    <td>${item.french}</td>
+                    <td class="answer-cell"><span class="answer">${item.english}</span></td>
+                `;
+            } 
+            // Last 5 rows: Hide French, show English
+            else {
+                row.innerHTML = `
+                    <td class="num-cell">${i + 1}</td>
+                    <td class="answer-cell"><span class="answer">${item.french}</span></td>
+                    <td>${item.english}</td>
+                `;
+            }
             testBody.appendChild(row);
         }
 
@@ -234,7 +245,9 @@
 
     function revealAnswers() {
         const answers = document.querySelectorAll('.answer');
-        const isHidden = !answers[0] || !answers[0].classList.contains('visible');
+        if (answers.length === 0) return;
+        
+        const isHidden = !answers[0].classList.contains('visible');
         
         answers.forEach(span => {
             span.classList.toggle('visible', isHidden);
