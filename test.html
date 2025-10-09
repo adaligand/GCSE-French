@@ -156,13 +156,13 @@
         <div class="test-panel">
             <div id="test-container" class="hide">
                 <table>
-                    <<thead>
-    <tr>
-        <th>No.</th>
-        <th>Target Language</th>
-        <th>English</th>
-    </tr>
-</thead>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Target Language</th>
+                            <th>English</th>
+                        </tr>
+                    </thead>
                     <tbody id="test-body"></tbody>
                 </table>
             </div>
@@ -171,14 +171,14 @@
         <div class="controls-panel">
              <h1 id="title">Vocabulary Test</h1>
              <div id="setup-controls" class="control-group hide">
-                <label for="theme-select">1. Choose Theme:</label>
-                <select id="theme-select"></select>
-                <label for="set-select">2. Choose Set:</label>
-                <select id="set-select"></select>
-                <label for="set-select-2">3. 2nd set (Optional):</label>
-                <select id="set-select-2"></select>
-                <button id="generate-btn">Generate List</button>
-            </div>
+                 <label for="theme-select">1. Choose Theme:</label>
+                 <select id="theme-select"></select>
+                 <label for="set-select">2. Choose Set:</label>
+                 <select id="set-select"></select>
+                 <label for="set-select-2">3. 2nd set (Optional):</label>
+                 <select id="set-select-2"></select>
+                 <button id="generate-btn">Generate List</button>
+             </div>
             <div id="test-controls" class="control-group hide">
                  <button id="reveal-btn">Reveal Answers</button>
                  <button id="print-btn">🖨️ Print Test</button>
@@ -226,7 +226,7 @@
 
                 results.data.forEach(row => {
                     const setNameInRow = row[0] ? row[0].trim() : '';
-                    const frenchWord = row[2] ? row[2].trim() : '';
+                    const targetWord = row[2] ? row[2].trim() : ''; // CHANGED
                     const englishWord = row[3] ? row[3].trim() : '';
 
                     if (setNameInRow !== '') {
@@ -234,8 +234,8 @@
                         currentSetName = setNameInRow;
                         currentSetWords = [];
                     }
-                    if (frenchWord !== '' && englishWord !== '') {
-                        currentSetWords.push({ french: frenchWord, english: englishWord });
+                    if (targetWord !== '' && englishWord !== '') { // CHANGED
+                        currentSetWords.push({ target: targetWord, english: englishWord }); // CHANGED
                     }
                 });
                 if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
@@ -283,12 +283,12 @@
 
         setsInTheme.forEach(setName => {
              const option1 = document.createElement('option');
-             option1.value = setName;
-             option1.textContent = `${setName} (${vocabSets[setName].length} words)`;
-             setSelect.appendChild(option1);
-             
-             const option2 = option1.cloneNode(true);
-             setSelect2.appendChild(option2);
+              option1.value = setName;
+              option1.textContent = `${setName} (${vocabSets[setName].length} words)`;
+              setSelect.appendChild(option1);
+              
+              const option2 = option1.cloneNode(true);
+              setSelect2.appendChild(option2);
         });
     }
 
@@ -303,36 +303,34 @@
             combinedSet = combinedSet.concat(vocabSets[selectedSetName2]);
         }
         
-        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.french, item])).values());
+        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.target, item])).values()); // CHANGED
         if (uniqueCombinedSet.length === 0) return;
 
         const shuffled = [...uniqueCombinedSet].sort(() => 0.5 - Math.random());
         
-        // --- NEW LOGIC TO PREVENT OVERLAP ---
-        // Select two distinct groups of up to 5 words each
-        const frenchQuestionItems = shuffled.slice(0, 5);
+        const targetQuestionItems = shuffled.slice(0, 5); // CHANGED name for clarity
         const englishQuestionItems = shuffled.slice(5, 10);
 
         testBody.innerHTML = '';
         
-        // Generate French to English questions
-        frenchQuestionItems.forEach((item, index) => {
+        // Generate Target Language to English questions
+        targetQuestionItems.forEach((item, index) => { // CHANGED name for clarity
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="num-cell">${index + 1}</td>
-                <td>${item.french}</td>
+                <td>${item.target}</td>
                 <td class="answer-cell"><span class="answer">${item.english}</span></td>
             `;
             testBody.appendChild(row);
         });
 
-        // Generate English to French questions
+        // Generate English to Target Language questions
         englishQuestionItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            const rowNumber = frenchQuestionItems.length + index + 1;
+            const rowNumber = targetQuestionItems.length + index + 1; // CHANGED name for clarity
             row.innerHTML = `
                 <td class="num-cell">${rowNumber}</td>
-                <td class="answer-cell"><span class="answer">${item.french}</span></td>
+                <td class="answer-cell"><span class="answer">${item.target}</span></td>
                 <td>${item.english}</td>
             `;
             testBody.appendChild(row);
