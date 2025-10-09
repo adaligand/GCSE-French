@@ -80,31 +80,15 @@
         .answer-cell span.visible { visibility: visible; }
 
         /* Print Specific Styles */
-           /* --- PRINT STYLES --- */
         @media print {
-            @page {
-                size: landscape;
-                margin: 1cm;
-            }
-            body {
-                font-size: 10pt;
-                padding: 0;
-                margin: 0;
-            }
-            .container > *:not(#print-area) {
-                display: none !important;
-            }
-            #print-area {
-                display: flex !important;
-                justify-content: space-around;
-                gap: 20px;
-                width: 100%;
-            }
-            .print-table-wrapper {
-                width: 48%;
-                page-break-inside: avoid;
-                box-sizing: border-box;
-            }
+            body > .container > div:not(#vocab-section) { display: none !important; }
+            #vocab-section { display: block !important; }
+            .vocab-controls-panel, .back-btn { display: none !important; }
+            .vocab-main-wrapper { display: block !important; max-width: 100%; }
+            .vocab-test-panel { width: 100%; }
+            table { font-size: 11pt; }
+            th, td { border: 1px solid #000; padding: 8px; }
+            .answer-cell span { visibility: hidden !important; } /* Hide answers on print */
         }
     </style>
 </head>
@@ -229,15 +213,17 @@
         Papa.parse(practiceSheetUrl, {
             download: true, header: true,
             complete: (results) => {
-                // FIX: Map and trim all relevant fields immediately after import
+                // FIX: Map and trim all relevant fields, using 'Skill' and 'Topic' as headers.
+                // We use Topic as the Title since a Title column doesn't exist.
                 practice_allQuestions = results.data
                     .map(q => ({
-                        skills: q.skills ? q.skills.trim() : '',
+                        Skill: q.Skill ? q.Skill.trim() : '', // Use your 'Skill' header
                         Topic: q.Topic ? q.Topic.trim() : '',
-                        Title: q.Title || '',
+                        Title: q.Topic ? q.Topic.trim() : 'Question', // Use Topic as Title
                         Content: q.Content || ''
                     }))
-                    .filter(q => q.skills && q.Topic && q.Content); // Filter out invalid rows
+                    // Filter: must have Skill, Topic, and Content
+                    .filter(q => q.Skill && q.Topic && q.Content); 
 
                 if (practice_allQuestions.length === 0) {
                     practice_topicSelect.innerHTML = '<option>No Questions Loaded</option>';
@@ -252,8 +238,8 @@
     function practice_populateTopics() {
         const selectedType = currentPracticeTypeInput.value;
         
-        // Use 'skills' (your column header) to filter data
-        const topics = [...new Set(practice_allQuestions.filter(q => q.skills === selectedType).map(q => q.Topic))];
+        // FIX: Filter by q.Skill instead of q.skills
+        const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
         
         practice_topicSelect.innerHTML = ''; // Clear "Loading..."
         topics.sort().forEach(topic => {
@@ -274,9 +260,9 @@
         const selectedType = currentPracticeTypeInput.value;
         const selectedTopic = practice_topicSelect.value;
         
-        // Filter first by 'skills' then by 'Topic'. No need for trim here, as it was done on load.
+        // FIX: Filter by q.Skill instead of q.skills
         const relevantQuestions = practice_allQuestions.filter(q => 
-            q.skills === selectedType && q.Topic === selectedTopic
+            q.Skill === selectedType && q.Topic === selectedTopic
         );
 
         if (relevantQuestions.length === 0) {
@@ -405,6 +391,5 @@
         window.print();
     }
 </script>
-
 </body>
 </html>
