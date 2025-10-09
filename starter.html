@@ -213,8 +213,16 @@
         Papa.parse(practiceSheetUrl, {
             download: true, header: true,
             complete: (results) => {
-                // Filter out rows that are completely empty
-                practice_allQuestions = results.data.filter(q => q.skills && q.Title && q.Content && q.Topic);
+                // FIX: Map and trim all relevant fields immediately after import
+                practice_allQuestions = results.data
+                    .map(q => ({
+                        skills: q.skills ? q.skills.trim() : '',
+                        Topic: q.Topic ? q.Topic.trim() : '',
+                        Title: q.Title || '',
+                        Content: q.Content || ''
+                    }))
+                    .filter(q => q.skills && q.Topic && q.Content); // Filter out invalid rows
+
                 if (practice_allQuestions.length === 0) {
                     practice_topicSelect.innerHTML = '<option>No Questions Loaded</option>';
                 }
@@ -241,7 +249,7 @@
             }
         });
         
-        if (topics.length === 0) {
+        if (practice_topicSelect.children.length === 0) {
             practice_topicSelect.innerHTML = '<option>No Topics Available</option>';
         }
     }
@@ -250,7 +258,7 @@
         const selectedType = currentPracticeTypeInput.value;
         const selectedTopic = practice_topicSelect.value;
         
-        // Filter first by 'skills' then by 'Topic'
+        // Filter first by 'skills' then by 'Topic'. No need for trim here, as it was done on load.
         const relevantQuestions = practice_allQuestions.filter(q => 
             q.skills === selectedType && q.Topic === selectedTopic
         );
@@ -271,7 +279,7 @@
         `;
     }
 
-    // --- VOCABULARY TEST LOGIC ---
+    // --- VOCABULARY TEST LOGIC (No changes here) ---
     const vocab_themeSelect = document.getElementById('theme-select');
     const vocab_setSelect = document.getElementById('set-select');
     const vocab_setSelect2 = document.getElementById('set-select-2');
@@ -280,7 +288,7 @@
     const vocab_testBody = document.getElementById('test-body');
     const vocab_testControls = document.getElementById('test-controls');
     const vocab_revealBtn = document.getElementById('reveal-btn');
-    const vocab_printBtn = document.getElementById('print-btn'); // New print button element
+    const vocab_printBtn = document.getElementById('print-btn'); 
     let vocab_vocabSets = {};
     const vocab_themeMap = { '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood', '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism' };
 
@@ -310,7 +318,7 @@
 
     vocab_generateBtn.addEventListener('click', vocab_generateTest);
     vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
-    vocab_printBtn.addEventListener('click', vocab_printTest); // New event listener for print
+    vocab_printBtn.addEventListener('click', vocab_printTest); 
     vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
     
     function vocab_initializeSelectors() {
