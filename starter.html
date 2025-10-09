@@ -78,6 +78,18 @@
         td.num-cell { font-weight: bold; color: #7f8c8d; }
         .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
         .answer-cell span.visible { visibility: visible; }
+
+        /* Print Specific Styles */
+        @media print {
+            body > .container > div:not(#vocab-section) { display: none !important; }
+            #vocab-section { display: block !important; }
+            .vocab-controls-panel, .back-btn { display: none !important; }
+            .vocab-main-wrapper { display: block !important; max-width: 100%; }
+            .vocab-test-panel { width: 100%; }
+            table { font-size: 11pt; }
+            th, td { border: 1px solid #000; padding: 8px; }
+            .answer-cell span { visibility: hidden !important; } /* Hide answers on print */
+        }
     </style>
 </head>
 <body>
@@ -135,6 +147,7 @@
                  </div>
                 <div id="test-controls" class="vocab-control-group hide">
                      <button id="reveal-btn">Reveal Answers</button>
+                     <button id="print-btn">Print List</button> 
                 </div>
                  <button class="back-btn">Back to Main Menu</button>
             </div>
@@ -203,7 +216,7 @@
                 // Filter out rows that are completely empty
                 practice_allQuestions = results.data.filter(q => q.skills && q.Title && q.Content && q.Topic);
                 if (practice_allQuestions.length === 0) {
-                    practice_questionDisplay.innerHTML = '<h2>Error</h2><p>No practice questions found. Ensure your sheet has headers: skills, Topic, Title, Content.</p>';
+                    practice_topicSelect.innerHTML = '<option>No Questions Loaded</option>';
                 }
             },
             error: () => { practice_questionDisplay.innerHTML = '<h2>Error</h2><p>Could not load the practice questions sheet.</p>'; }
@@ -258,7 +271,7 @@
         `;
     }
 
-    // --- VOCABULARY TEST LOGIC (No changes here) ---
+    // --- VOCABULARY TEST LOGIC ---
     const vocab_themeSelect = document.getElementById('theme-select');
     const vocab_setSelect = document.getElementById('set-select');
     const vocab_setSelect2 = document.getElementById('set-select-2');
@@ -267,6 +280,7 @@
     const vocab_testBody = document.getElementById('test-body');
     const vocab_testControls = document.getElementById('test-controls');
     const vocab_revealBtn = document.getElementById('reveal-btn');
+    const vocab_printBtn = document.getElementById('print-btn'); // New print button element
     let vocab_vocabSets = {};
     const vocab_themeMap = { '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood', '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism' };
 
@@ -296,6 +310,7 @@
 
     vocab_generateBtn.addEventListener('click', vocab_generateTest);
     vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
+    vocab_printBtn.addEventListener('click', vocab_printTest); // New event listener for print
     vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
     
     function vocab_initializeSelectors() {
@@ -334,6 +349,7 @@
         if (uniqueCombinedSet.length === 0) return;
 
         const shuffled = uniqueCombinedSet.sort(() => 0.5 - Math.random());
+        // Show 5 questions for target language and 5 for english
         const targetQuestions = shuffled.slice(0, 5);
         const englishQuestions = shuffled.slice(5, 10);
         vocab_testBody.innerHTML = '';
@@ -361,6 +377,9 @@
         vocab_revealBtn.textContent = isHidden ? 'Hide Answers' : 'Reveal Answers';
     }
 
+    function vocab_printTest() {
+        window.print();
+    }
 </script>
 
 </body>
