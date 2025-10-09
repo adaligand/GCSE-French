@@ -225,9 +225,9 @@
                 let currentSetWords = [];
 
                 results.data.forEach(row => {
-                    const setNameInRow = row[0] ? row[0].trim() : '';
-                    const targetWord = row[2] ? row[2].trim() : ''; // CHANGED
-                    const englishWord = row[3] ? row[3].trim() : '';
+                    const setNameInRow = row[1] ? row[0].trim() : '';
+                    const targetWord = row[3] ? row[2].trim() : ''; // CHANGED
+                    const englishWord = row[4] ? row[3].trim() : '';
 
                     if (setNameInRow !== '') {
                         if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
