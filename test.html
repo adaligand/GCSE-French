@@ -150,18 +150,23 @@
                 let currentSetWords = [];
 
                 results.data.forEach(row => {
-                    const setNameInRow = row[3] ? row[3].trim() : ''; // Column D
-                    const frenchWord = row[4] ? row[4].trim() : ''; // Column E
-                    const englishWord = row[5] ? row[5].trim() : ''; // Column F
+                    // Updated to new column structure
+                    const setNameInRow = row[0] ? row[0].trim() : ''; // Column A
+                    const frenchWord = row[2] ? row[2].trim() : ''; // Column C
+                    const englishWord = row[3] ? row[3].trim() : ''; // Column D
 
+                    // Check if this row defines a new set name.
                     if (setNameInRow !== '') {
+                        // If we were already building a set, save the completed one.
                         if (currentSetName && currentSetWords.length > 0) {
                             vocabSets[currentSetName] = currentSetWords;
                         }
+                        // Start the new set.
                         currentSetName = setNameInRow;
                         currentSetWords = [];
                     }
 
+                    // If the row contains a valid word pair, add it to the current set being built.
                     if (frenchWord !== '' && englishWord !== '') {
                         currentSetWords.push({
                             french: frenchWord,
@@ -170,6 +175,7 @@
                     }
                 });
 
+                // After the loop, save the very last set that was being built.
                 if (currentSetName && currentSetWords.length > 0) {
                     vocabSets[currentSetName] = currentSetWords;
                 }
@@ -179,7 +185,7 @@
                     loadingMessage.classList.add('hide');
                     controlsContainer.classList.remove('hide');
                 } else {
-                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns D, E, and F in your sheet.";
+                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns A, C, and D in your sheet.";
                 }
             },
             error: () => {
@@ -205,21 +211,17 @@
         const selectedSet = vocabSets[selectedSetName];
         if (!selectedSet || selectedSet.length === 0) return;
 
-        // Shuffle the array and pick 10 random items
         const shuffled = [...selectedSet].sort(() => 0.5 - Math.random());
         const testItems = shuffled.slice(0, 10);
 
-        testBody.innerHTML = ''; // Clear previous test
+        testBody.innerHTML = '';
         
-        // Generate the 10 rows
         for (let i = 0; i < 10; i++) {
-            // Stop if we run out of words
             if (!testItems[i]) break;
 
             const item = testItems[i];
             const row = document.createElement('tr');
             
-            // First 5 rows: Show French, hide English
             if (i < 5) {
                 row.innerHTML = `
                     <td class="num-cell">${i + 1}</td>
@@ -227,7 +229,6 @@
                     <td class="answer-cell"><span class="answer">${item.english}</span></td>
                 `;
             } 
-            // Last 5 rows: Hide French, show English
             else {
                 row.innerHTML = `
                     <td class="num-cell">${i + 1}</td>
@@ -239,8 +240,8 @@
         }
 
         testContainer.classList.remove('hide');
-        revealBtn.textContent = 'Reveal Answers'; // Reset button text
-        document.querySelectorAll('.answer').forEach(span => span.classList.remove('visible')); // Ensure answers are hidden
+        revealBtn.textContent = 'Reveal Answers';
+        document.querySelectorAll('.answer').forEach(span => span.classList.remove('visible'));
     }
 
     function revealAnswers() {
