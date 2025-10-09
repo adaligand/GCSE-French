@@ -87,7 +87,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 1.6em;
+            font-size: 1.4em;
             table-layout: fixed;
         }
         th, td {
@@ -274,7 +274,6 @@
         setSelect.innerHTML = '';
         setSelect2.innerHTML = '';
 
-        // Add a default "None" option to the second dropdown
         const noneOption = document.createElement('option');
         noneOption.value = "";
         noneOption.textContent = "-- None --";
@@ -300,34 +299,44 @@
         if (!selectedSetName1) return;
 
         let combinedSet = [...vocabSets[selectedSetName1]];
-
-        // If a second set is chosen, add its words to the pool
         if (selectedSetName2 && selectedSetName2 !== "") {
             combinedSet = combinedSet.concat(vocabSets[selectedSetName2]);
         }
         
-        // Remove duplicates, in case the same word is in both sets
         const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.french, item])).values());
-
         if (uniqueCombinedSet.length === 0) return;
 
         const shuffled = [...uniqueCombinedSet].sort(() => 0.5 - Math.random());
-        const testItems = shuffled.slice(0, 10);
+        
+        // --- NEW LOGIC TO PREVENT OVERLAP ---
+        // Select two distinct groups of up to 5 words each
+        const frenchQuestionItems = shuffled.slice(0, 5);
+        const englishQuestionItems = shuffled.slice(5, 10);
 
         testBody.innerHTML = '';
-        const numTotalQuestions = testItems.length;
-        const numFrenchQuestions = Math.ceil(numTotalQuestions / 2);
         
-        for (let i = 0; i < numTotalQuestions; i++) {
-            const item = testItems[i];
+        // Generate French to English questions
+        frenchQuestionItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            if (i < numFrenchQuestions) {
-                row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.french}</td><td class="answer-cell"><span class="answer">${item.english}</span></td>`;
-            } else {
-                row.innerHTML = `<td class="num-cell">${i + 1}</td><td class="answer-cell"><span class="answer">${item.french}</span></td><td>${item.english}</td>`;
-            }
+            row.innerHTML = `
+                <td class="num-cell">${index + 1}</td>
+                <td>${item.french}</td>
+                <td class="answer-cell"><span class="answer">${item.english}</span></td>
+            `;
             testBody.appendChild(row);
-        }
+        });
+
+        // Generate English to French questions
+        englishQuestionItems.forEach((item, index) => {
+            const row = document.createElement('tr');
+            const rowNumber = frenchQuestionItems.length + index + 1;
+            row.innerHTML = `
+                <td class="num-cell">${rowNumber}</td>
+                <td class="answer-cell"><span class="answer">${item.french}</span></td>
+                <td>${item.english}</td>
+            `;
+            testBody.appendChild(row);
+        });
         
         const onScreenTable = document.querySelector('#test-container table');
         const tableToPrint = onScreenTable.cloneNode(true); 
