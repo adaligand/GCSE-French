@@ -3,47 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Test</title>
+    <title>Vocabulary List Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f4f7f6;
             color: #333;
-            display: flex;
-            justify-content: center;
-            padding-top: 40px;
-            min-height: 100vh;
             font-size: 18px;
+            margin: 0;
+            padding: 20px;
         }
         .container {
-            width: 95%; /* Increased from 90% */
-            max-width: 1200px; /* Increased from 800px */
+            width: 95%;
+            max-width: 1400px; /* Allow container to be wider */
+            margin: 0 auto;
             padding: 30px;
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
-        h1 {
+        h1, #loading-message {
             text-align: center;
-            color: #2c3e50;
         }
-        .controls, #test-controls {
+        
+        /* New 2-Column Layout */
+        .main-content-wrapper {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin: 20px 0;
-            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 20px;
         }
+        .test-panel {
+            flex-grow: 1; /* Table panel takes up most of the space */
+        }
+        .controls-panel {
+            flex: 0 0 280px; /* Fixed width for the controls column */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .controls-panel .control-group {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
         label {
             font-weight: bold;
         }
         select, button {
+            width: 100%;
             font-size: 1em;
-            padding: 10px 15px;
+            padding: 12px 15px;
             border-radius: 8px;
             border: 1px solid #ccc;
+            box-sizing: border-box; /* Ensures padding doesn't affect width */
         }
         button {
             background-color: #2980b9;
@@ -63,8 +81,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 1.1em;
+            font-size: 1.2em;
         }
         th, td {
             border: 1px solid #ddd;
@@ -95,7 +112,7 @@
         /* --- PRINT STYLES --- */
         @media print {
             @page {
-                size: landscape; /* Set page orientation to landscape */
+                size: landscape;
                 margin: 1cm;
             }
             body {
@@ -107,20 +124,16 @@
                 display: none !important;
             }
             #print-area {
-                display: flex !important; /* Use flexbox for side-by-side layout */
+                display: flex !important;
                 justify-content: space-around;
                 gap: 20px;
                 width: 100%;
             }
             .print-table-wrapper {
-                width: 48%; /* Each table wrapper takes up about half the page width */
+                width: 48%;
                 page-break-inside: avoid;
                 box-sizing: border-box;
             }
-             .print-table-wrapper h2 {
-                text-align: center;
-                font-size: 1.2em;
-             }
         }
     </style>
 </head>
@@ -130,29 +143,34 @@
     <h1 id="title">Vocabulary List Generator</h1>
     <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
 
-    <div id="controls-container" class="controls hide">
-        <label for="theme-select">Theme:</label>
-        <select id="theme-select"></select>
-        <label for="set-select">Set:</label>
-        <select id="set-select"></select>
-        <button id="generate-btn">Generate List</button>
-    </div>
+    <div class="main-content-wrapper">
+        <div class="test-panel">
+            <div id="test-container" class="hide">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>French</th>
+                            <th>English</th>
+                        </tr>
+                    </thead>
+                    <tbody id="test-body"></tbody>
+                </table>
+            </div>
+        </div>
 
-    <div id="test-container" class="hide">
-        <hr>
-        <table>
-            <thead>
-                <tr>
-                    <th>No.</th>
-                    <th>French</th>
-                    <th>English</th>
-                </tr>
-            </thead>
-            <tbody id="test-body"></tbody>
-        </table>
-        <div id="test-controls">
-             <button id="reveal-btn">Reveal Answers</button>
-             <button id="print-btn">🖨️ Print Test</button>
+        <div class="controls-panel">
+             <div id="setup-controls" class="control-group hide">
+                <label for="theme-select">1. Choose Theme:</label>
+                <select id="theme-select"></select>
+                <label for="set-select">2. Choose Set:</label>
+                <select id="set-select"></select>
+                <button id="generate-btn">Generate List</button>
+            </div>
+            <div id="test-controls" class="control-group hide">
+                 <button id="reveal-btn">Reveal Answers</button>
+                 <button id="print-btn">🖨️ Print Test</button>
+            </div>
         </div>
     </div>
     
@@ -161,12 +179,13 @@
 
 <script>
     const loadingMessage = document.getElementById('loading-message');
-    const controlsContainer = document.getElementById('controls-container');
+    const setupControls = document.getElementById('setup-controls');
     const themeSelect = document.getElementById('theme-select');
     const setSelect = document.getElementById('set-select');
     const generateBtn = document.getElementById('generate-btn');
     const testContainer = document.getElementById('test-container');
     const testBody = document.getElementById('test-body');
+    const testControls = document.getElementById('test-controls');
     const revealBtn = document.getElementById('reveal-btn');
     const printBtn = document.getElementById('print-btn');
     const printArea = document.getElementById('print-area');
@@ -211,7 +230,7 @@
                 if (Object.keys(vocabSets).length > 0) {
                     initializeSelectors();
                     loadingMessage.classList.add('hide');
-                    controlsContainer.classList.remove('hide');
+                    setupControls.classList.remove('hide');
                 } else {
                     loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns A, C, and D.";
                 }
@@ -260,7 +279,6 @@
         const shuffled = [...selectedSet].sort(() => 0.5 - Math.random());
         const testItems = shuffled.slice(0, 10);
 
-        // 1. Generate the on-screen table
         testBody.innerHTML = '';
         const numTotalQuestions = testItems.length;
         const numFrenchQuestions = Math.ceil(numTotalQuestions / 2);
@@ -275,29 +293,25 @@
             }
             testBody.appendChild(row);
         }
-
-        // 2. Generate the hidden print-area content
+        
         const onScreenTable = document.querySelector('#test-container table');
-        // We need to clone the table to preserve the on-screen version
         const tableToPrint = onScreenTable.cloneNode(true); 
-        // We must query the cloned table for its elements
         const tableHeaderHTML = tableToPrint.querySelector('thead').outerHTML;
         const tableBodyHTML = tableToPrint.querySelector('tbody').innerHTML;
-        const fullTableHTML = `<h2>${selectedSetName}</h2><table>${tableHeaderHTML}${tableBodyHTML}</table>`;
+        const fullTableHTML = `<table>${tableHeaderHTML}${tableBodyHTML}</table>`;
 
         printArea.innerHTML = `
             <div class="print-table-wrapper">${fullTableHTML}</div>
             <div class="print-table-wrapper">${fullTableHTML}</div>
         `;
-
-        // 3. Update UI
+        
         testContainer.classList.remove('hide');
+        testControls.classList.remove('hide');
         revealBtn.textContent = 'Reveal Answers';
         document.querySelectorAll('.answer').forEach(span => span.classList.remove('visible'));
     }
 
     function revealAnswers() {
-        // This selector gets answers from both the on-screen table and the hidden print tables
         const answers = document.querySelectorAll('.answer'); 
         if (answers.length === 0) return;
         
