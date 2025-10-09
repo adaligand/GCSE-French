@@ -3,529 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Language Practice Hub</title>
+    <title>Vocabulary Test</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        /* General Styles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #1c1e21;
+            background-color: #f4f7f6;
+            color: #333;
+            font-size: 22px;
             margin: 0;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
         }
         .container {
-            width: 100%;
+            width: 95%;
             max-width: 1400px;
-            background: #fff;
-            padding: 25px 30px;
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
-        h1, h2 { text-align: center; color: #333; }
-        .hide { display: none !important; }
-
-        /* Main Menu Styles */
-        #main-menu { text-align: center; }
-        #main-menu .menu-buttons { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
-        .menu-button {
-            font-size: 1.2em;
-            padding: 20px 40px;
-            border-radius: 10px;
-            border: none;
-            color: white;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+        #loading-message {
+            text-align: center;
         }
-        .menu-button:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
-        #reading-btn { background-color: #2980b9; }
-        #listening-btn { background-color: #27ae60; }
-        #vocab-btn { background-color: #8e44ad; }
-        .back-btn {
-            background-color: #7f8c8d;
-            color: white;
-            border: none;
-            cursor: pointer;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 1em;
+        
+        .main-content-wrapper {
+            display: flex;
+            gap: 30px;
             margin-top: 20px;
         }
-
-        /* Reading/Listening Practice Styles */
-        .practice-controls { display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; }
-        .practice-control-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; }
-        label { font-weight: 600; margin-bottom: 8px; color: #606770; }
-        /* General select/button styles for practice section */
-        #practice-section select, #practice-section button { font-size: 16px; padding: 12px; border-radius: 8px; border: 1px solid #dddfe2; background-color: #f5f6f7; box-sizing: border-box; }
-        #generate-practice-btn { background-color: #1877f2; color: white; border: none; cursor: pointer; font-weight: bold; flex-grow: 1; }
-        .practice-button-container { display: flex; align-items: flex-end; }
-        #question-display { border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; min-height: 400px; background-color: #fafafa; overflow: hidden; display: flex; flex-direction: column; }
-        #question-display iframe { width: 100%; height: 500px; border-radius: 8px; border: none; }
+        .test-panel {
+            flex-grow: 1;
+        }
+        .controls-panel {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .controls-panel h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            margin-top: 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .controls-panel .control-group {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
         
-        /* VOCABULARY TEST STYLES */
-        .vocab-main-wrapper { display: flex; gap: 30px; margin-top: 20px; }
-        .vocab-test-panel { flex-grow: 1; }
-        .vocab-controls-panel { flex: 0 0 300px; display: flex; flex-direction: column; gap: 15px; }
-        .vocab-controls-panel h1 { font-size: 1.5em; margin-bottom: 10px; margin-top: 0; color: #2c3e50; text-align: center; }
-        .vocab-controls-panel .vocab-control-group { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        label {
+            font-weight: bold;
+        }
+        select, button {
+            width: 100%;
+            font-size: 1em;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #3498db;
+        }
+        #reveal-btn { background-color: #27ae60; }
+        #reveal-btn:hover { background-color: #2ecc71; }
+        #print-btn { background-color: #8e44ad; }
+        #print-btn:hover { background-color: #9b59b6; }
         
-        /* Vocab button/select specific styles */
-        #vocab-section select, #vocab-section button { width: 100%; font-size: 1em; padding: 12px 15px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
-        #vocab-section button { background-color: #2980b9; color: white; border: none; cursor: pointer; transition: background-color 0.2s; }
-        #vocab-section button:hover { background-color: #3498db; }
-        #vocab-reveal-btn { background-color: #27ae60; }
-        #vocab-reveal-btn:hover { background-color: #2ecc71; }
-        #vocab-print-btn { background-color: #8e44ad; }
-        #vocab-print-btn:hover { background-color: #9b59b6; }
-        
-        /* Vocab table styles */
-        #vocab-test-container table { width: 100%; border-collapse: collapse; font-size: 1.4em; table-layout: fixed; }
-        #vocab-test-container th, #vocab-test-container td { border: 1px solid #ddd; padding: 12px; text-align: left; overflow-wrap: break-word; }
-        #vocab-test-container th { background-color: #f9f9f9; }
-        #vocab-test-container th:first-child, #vocab-test-container td.num-cell { width: 60px; text-align: center; }
-        #vocab-test-container td.num-cell { font-weight: bold; color: #7f8c8d; }
-        .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
-        .answer-cell span.visible { visibility: visible; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1.4em;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            overflow-wrap: break-word;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        th:first-child, td.num-cell {
+            width: 60px; 
+            text-align: center;
+        }
+        td.num-cell {
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        .answer-cell span {
+            visibility: hidden;
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .answer-cell span.visible {
+            visibility: visible;
+        }
+        .hide {
+            display: none;
+        }
 
         /* --- PRINT STYLES --- */
         @media print {
-            /* 1. Reset Print Body & Page */
-            body { 
-                padding: 0; 
-                margin: 0; 
-                background: white !important;
-            }
             @page {
-                size: A4; /* Use standard size */
-                margin: 1cm; /* Minimal margins */
+                size: landscape;
+                margin: 1cm;
             }
-
-            /* 2. Hide everything by default */
-            .container, #main-menu, #practice-section, #vocab-controls-panel { 
-                display: none !important; 
-            }
-            
-            /* 3. Show only the print area container and set it to fill the width */
-            #vocab-section { 
-                display: block !important; 
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                max-width: none;
-            }
-            .vocab-main-wrapper { 
-                display: block !important; 
-                width: 100%;
+            body {
+                font-size: 10pt;
+                padding: 0;
                 margin: 0;
             }
-            
-            /* 4. Display the print-area tables in two columns */
-            #vocab-print-area { 
+            .container > *:not(#print-area) {
+                display: none !important;
+            }
+            #print-area {
                 display: flex !important;
-                justify-content: space-between;
+                justify-content: space-around;
                 gap: 20px;
                 width: 100%;
-                margin: 0;
             }
             .print-table-wrapper {
-                width: 48%; /* Ensure two columns fit */
-                page-break-inside: avoid; /* Prevent tables from splitting */
+                width: 48%;
+                page-break-inside: avoid;
                 box-sizing: border-box;
             }
-            
-            /* 5. Hide the on-screen test table and controls */
-            #vocab-test-container, .vocab-controls-panel, .back-btn { 
-                display: none !important; 
-            }
-            
-            /* 6. Style the print tables */
-            #vocab-print-area table { 
-                font-size: 16pt; /* Increase font size for better readability on page */
-                border-collapse: collapse; 
-                width: 100%; 
-                margin: 0;
-            }
-            #vocab-print-area th, #vocab-print-area td { 
-                border: 1px solid #000; 
-                padding: 10px; 
-                line-height: 1.2;
-            }
-            #vocab-print-area .answer-cell span { 
-                visibility: hidden !important; 
-            } 
-            /* Ensure numbers are centered */
-            #vocab-print-area th:first-child, #vocab-print-area td.num-cell { width: 60px; text-align: center; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
 
-    <div id="main-menu">
-        <h1>Language Practice Hub</h1>
-        <p>Please choose an activity</p>
-        <div class="menu-buttons">
-            <button id="reading-btn" class="menu-button">Reading Practice</button>
-            <button id="listening-btn" class="menu-button">Listening Practice</button>
-            <button id="vocab-btn" class="menu-button">Vocabulary Test</button>
-        </div>
-    </div>
-
-    <div id="practice-section" class="hide">
-        <h1 id="practice-title">Practice Section</h1>
-        <input type="hidden" id="current-practice-type" value="">
-        <div class="practice-controls">
-            <div class="practice-control-group">
-                <label for="topic-select">Choose a Topic:</label>
-                <select id="topic-select"><option>Loading Topics...</option></select>
-            </div>
-            <div class="practice-control-group practice-button-container">
-                 <button id="generate-practice-btn">Generate Question</button>
+    <div class="main-content-wrapper">
+        <div class="test-panel">
+            <div id="test-container" class="hide">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Target Language</th>
+                            <th>English</th>
+                        </tr>
+                    </thead>
+                    <tbody id="test-body"></tbody>
+                </table>
             </div>
         </div>
-        <div id="question-display">
-            <h2>Your question will appear here</h2>
-            <p>Select a topic and click "Generate Question".</p>
-        </div>
-        <button class="back-btn">Back to Main Menu</button>
-    </div>
 
-    <div id="vocab-section" class="hide">
-        <div class="vocab-main-wrapper">
-            <div class="vocab-test-panel">
-                 <div id="vocab-test-container" class="hide">
-                     <table>
-                         <thead>
-                             <tr><th>No.</th><th>Target Language</th><th>English</th></tr>
-                         </thead>
-                         <tbody id="vocab-test-body"></tbody>
-                     </table>
-                 </div>
-                 <div id="vocab-print-area" class="hide"></div>
-            </div>
-            <div class="vocab-controls-panel">
-                 <h1>Vocabulary Test</h1>
-                 <div id="vocab-setup-controls" class="vocab-control-group">
-                     <label for="vocab-theme-select">1. Choose Theme:</label><select id="vocab-theme-select"></select>
-                     <label for="vocab-set-select">2. Choose Set:</label><select id="vocab-set-select"></select>
-                     <label for="vocab-set-select-2">3. 2nd set (Optional):</label><select id="vocab-set-select-2"></select>
-                     <button id="vocab-generate-btn">Generate List</button>
-                 </div>
-                <div id="vocab-test-controls" class="vocab-control-group hide">
-                     <button id="vocab-reveal-btn">Reveal Answers</button>
-                     <button id="vocab-print-btn">🖨️ Print Test</button>
-                </div>
-                 <button class="back-btn">Back to Main Menu</button>
+        <div class="controls-panel">
+             <h1 id="title">Vocabulary Test</h1>
+             <div id="setup-controls" class="control-group hide">
+                 <label for="theme-select">1. Choose Theme:</label>
+                 <select id="theme-select"></select>
+                 <label for="set-select">2. Choose Set:</label>
+                 <select id="set-select"></select>
+                 <label for="set-select-2">3. 2nd set (Optional):</label>
+                 <select id="set-select-2"></select>
+                 <button id="generate-btn">Generate List</button>
+             </div>
+            <div id="test-controls" class="control-group hide">
+                 <button id="reveal-btn">Reveal Answers</button>
+                 <button id="print-btn">🖨️ Print Test</button>
             </div>
         </div>
     </div>
-
+    
+    <div id="print-area" class="hide"></div>
 </div>
 
 <script>
-    // URLs for your Google Sheets
-    const practiceSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvNFlHDx-4cZbDzwKy5Yb_DKeSxS2wSXxyX1Ua6pGcf27yFjmqOPz9jQ_rzoV3-zoZI9lw4EIfmdXH/pub?output=csv";
-    const vocabSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv";
+    const loadingMessage = document.getElementById('loading-message');
+    const setupControls = document.getElementById('setup-controls');
+    const themeSelect = document.getElementById('theme-select');
+    const setSelect = document.getElementById('set-select');
+    const setSelect2 = document.getElementById('set-select-2');
+    const generateBtn = document.getElementById('generate-btn');
+    const testContainer = document.getElementById('test-container');
+    const testBody = document.getElementById('test-body');
+    const testControls = document.getElementById('test-controls');
+    const revealBtn = document.getElementById('reveal-btn');
+    const printBtn = document.getElementById('print-btn');
+    const printArea = document.getElementById('print-area');
 
-    // --- SECTION VISIBILITY & NAVIGATION ---
-    const mainMenu = document.getElementById('main-menu');
-    const practiceSection = document.getElementById('practice-section');
-    const vocabSection = document.getElementById('vocab-section');
-    const currentPracticeTypeInput = document.getElementById('current-practice-type');
+    let vocabSets = {};
 
-    document.getElementById('reading-btn').addEventListener('click', () => showPractice('Reading'));
-    document.getElementById('listening-btn').addEventListener('click', () => showPractice('Listening'));
-    document.getElementById('vocab-btn').addEventListener('click', showVocabTest);
+    const themeMap = {
+        '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood',
+        '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism'
+    };
 
-    document.querySelectorAll('.back-btn').forEach(btn => {
-        btn.addEventListener('click', showMainMenu);
-    });
-
-    function showMainMenu() {
-        mainMenu.classList.remove('hide');
-        practiceSection.classList.add('hide');
-        vocabSection.classList.add('hide');
-    }
-
-    function showPractice(type) {
-        mainMenu.classList.add('hide');
-        practiceSection.classList.remove('hide');
-        vocabSection.classList.add('hide');
-        
-        document.getElementById('practice-title').textContent = `${type} Practice`;
-        currentPracticeTypeInput.value = type; 
-        practice_populateTopics();
-    }
-
-    function showVocabTest() {
-        mainMenu.classList.add('hide');
-        practiceSection.classList.add('hide');
-        vocabSection.classList.remove('hide');
-        
-        if (Object.keys(vocab_vocabSets).length > 0) {
-            document.getElementById('vocab-setup-controls').classList.remove('hide');
-        }
-    }
-
-    // --- INITIAL DATA LOADING ---
     document.addEventListener('DOMContentLoaded', () => {
-        loadPracticeData();
-        loadVocabData();
-    });
-
-    // --- READING/LISTENING PRACTICE LOGIC ---
-    const practice_topicSelect = document.getElementById('topic-select');
-    const practice_generateBtn = document.getElementById('generate-practice-btn');
-    const practice_questionDisplay = document.getElementById('question-display');
-    let practice_allQuestions = [];
-
-    function loadPracticeData() {
-        Papa.parse(practiceSheetUrl, {
-            download: true, header: true,
-            complete: (results) => {
-                // FIX: Correctly maps headers: 'Skill', 'Topic', 'Content'
-                practice_allQuestions = results.data
-                    .map(q => ({
-                        Skill: q.Skill ? q.Skill.trim() : '', 
-                        Topic: q.Topic ? q.Topic.trim() : '',
-                        Title: q.Topic ? q.Topic.trim() : 'Question', 
-                        Content: q.Content || ''
-                    }))
-                    .filter(q => q.Skill && q.Topic && q.Content); 
-
-                if (practice_allQuestions.length === 0) {
-                    practice_topicSelect.innerHTML = '<option>No Questions Loaded</option>';
-                }
-            },
-            error: () => { practice_questionDisplay.innerHTML = '<h2>Error</h2><p>Could not load the practice questions sheet.</p>'; }
-        });
-    }
-
-    practice_generateBtn.addEventListener('click', practice_generateQuestion);
-
-    function practice_populateTopics() {
-        const selectedType = currentPracticeTypeInput.value;
-        
-        // FIX: Filter by q.Skill instead of q.skills
-        const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
-        
-        practice_topicSelect.innerHTML = ''; 
-        topics.sort().forEach(topic => {
-            if (topic) { 
-                const option = document.createElement('option');
-                option.value = topic;
-                option.textContent = topic;
-                practice_topicSelect.appendChild(option);
-            }
-        });
-        
-        if (practice_topicSelect.children.length === 0) {
-            practice_topicSelect.innerHTML = '<option>No Topics Available</option>';
-        }
-    }
-
-    function practice_generateQuestion() {
-        const selectedType = currentPracticeTypeInput.value;
-        const selectedTopic = practice_topicSelect.value;
-        
-        const relevantQuestions = practice_allQuestions.filter(q => 
-            q.Skill === selectedType && q.Topic === selectedTopic
-        );
-
-        if (relevantQuestions.length === 0) {
-            practice_questionDisplay.innerHTML = '<h2>No Questions Found</h2><p>No questions matched your selection. Try a different topic or check your spreadsheet data.</p>';
+        const params = new URLSearchParams(window.location.search);
+        const sheetUrl = params.get('sheet');
+        if (!sheetUrl) {
+            loadingMessage.textContent = "⚠️ Please provide a Google Sheet URL in the '?sheet=' parameter.";
             return;
         }
 
-        const randomQuestion = relevantQuestions[Math.floor(Math.random() * relevantQuestions.length)];
-        const contentLink = randomQuestion.Content; 
-        
-        let contentHTML = '';
-
-        // Check if the content is a Google Slides URL (for embedding)
-        if (contentLink && contentLink.toLowerCase().includes('google.com/presentation')) {
-            
-            // 1. Convert to the base /embed URL
-            let embedUrl = contentLink.replace('/present', '/embed').replace('/edit', '/embed');
-
-            // 2. Extract the slide ID parameter (e.g., "?slide=id.p2")
-            const slideIdMatch = contentLink.match(/(\?slide=id\.[a-zA-Z0-9]+)/);
-            
-            if (slideIdMatch) {
-                // If a slide ID is found, append it to the embed URL with necessary parameters
-                const slideIdParam = slideIdMatch[1];
-                
-                // Construct the final source URL for the iframe
-                embedUrl = embedUrl.split('?')[0] + '?start=false&loop=false&delayms=3000' + slideIdParam;
-            } else {
-                // If no specific slide ID, just use the basic embed URL
-                embedUrl = embedUrl.split('?')[0] + '?start=false&loop=false&delayms=3000';
-            }
-            
-            // Use an iframe to embed the slide
-            contentHTML = `
-                <iframe 
-                    src="${embedUrl}" 
-                    style="width:100%; height:500px; border:none; background:#f0f0f0;" 
-                    allowfullscreen="true" 
-                    mozallowfullscreen="true" 
-                    webkitallowfullscreen="true">
-                </iframe>
-            `;
-        } else {
-            // Display as regular content (for reading practice or plain text)
-            contentHTML = `<div class="content">${contentLink}</div>`;
-        }
-
-        practice_questionDisplay.innerHTML = `
-            <h2>${randomQuestion.Title || 'Question'}</h2>
-            ${contentHTML}
-        `;
-    }
-
-    // --- VOCABULARY TEST LOGIC ---
-    const vocab_themeSelect = document.getElementById('vocab-theme-select');
-    const vocab_setSelect = document.getElementById('vocab-set-select');
-    const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
-    const vocab_generateBtn = document.getElementById('vocab-generate-btn');
-    const vocab_testContainer = document.getElementById('vocab-test-container');
-    const vocab_testBody = document.getElementById('vocab-test-body');
-    const vocab_testControls = document.getElementById('vocab-test-controls');
-    const vocab_revealBtn = document.getElementById('vocab-reveal-btn');
-    const vocab_printBtn = document.getElementById('vocab-print-btn'); 
-    const vocab_printArea = document.getElementById('vocab-print-area');
-    const vocab_setupControls = document.getElementById('vocab-setup-controls');
-    let vocab_vocabSets = {};
-    const vocab_themeMap = { '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood', '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism' };
-
-    function loadVocabData() {
-        Papa.parse(vocabSheetUrl, {
+        Papa.parse(sheetUrl, {
             download: true, header: false, skipEmptyLines: true,
             complete: (results) => {
-                let currentSetName = null, currentSetWords = [];
+                let currentSetName = null;
+                let currentSetWords = [];
+
                 results.data.forEach(row => {
                     const setNameInRow = row[0] ? row[0].trim() : '';
-                    const targetWord = row[2] ? row[2].trim() : '';
+                    const targetWord = row[2] ? row[2].trim() : ''; // CHANGED
                     const englishWord = row[3] ? row[3].trim() : '';
-                    
+
                     if (setNameInRow !== '') {
-                        if (currentSetName && currentSetWords.length > 0) vocab_vocabSets[currentSetName] = currentSetWords;
+                        if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
                         currentSetName = setNameInRow;
                         currentSetWords = [];
                     }
-                    if (targetWord !== '' && englishWord !== '') {
-                        currentSetWords.push({ target: targetWord, english: englishWord });
+                    if (targetWord !== '' && englishWord !== '') { // CHANGED
+                        currentSetWords.push({ target: targetWord, english: englishWord }); // CHANGED
                     }
                 });
-                if (currentSetName && currentSetWords.length > 0) vocab_vocabSets[currentSetName] = currentSetWords;
-                if (Object.keys(vocab_vocabSets).length > 0) {
-                    vocab_initializeSelectors();
+                if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
+                
+                if (Object.keys(vocabSets).length > 0) {
+                    initializeSelectors();
+                    loadingMessage.classList.add('hide');
+                    setupControls.classList.remove('hide');
+                } else {
+                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns A, C, and D.";
                 }
-            }
+            },
+            error: () => { loadingMessage.textContent = "⚠️ Failed to load spreadsheet."; }
         });
-    }
 
-    vocab_generateBtn.addEventListener('click', vocab_generateTest);
-    vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
-    vocab_printBtn.addEventListener('click', () => window.print());
-    vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
-    
-    function vocab_initializeSelectors() {
-        const themes = [...new Set(Object.keys(vocab_vocabSets).map(setName => setName.split('.')[0]))];
-        vocab_themeSelect.innerHTML = '';
+        generateBtn.addEventListener('click', generateTest);
+        revealBtn.addEventListener('click', revealAnswers);
+        themeSelect.addEventListener('change', updateSetDropdown);
+        printBtn.addEventListener('click', () => window.print());
+    });
+
+    function initializeSelectors() {
+        const themes = [...new Set(Object.keys(vocabSets).map(setName => setName.split('.')[0]))];
+        themeSelect.innerHTML = '';
         themes.sort((a, b) => a - b).forEach(theme => {
             const option = document.createElement('option');
             option.value = theme;
-            option.textContent = vocab_themeMap[theme] || `Theme ${theme}`;
-            vocab_themeSelect.appendChild(option);
+            option.textContent = themeMap[theme] || `Theme ${theme}`;
+            themeSelect.appendChild(option);
         });
-        vocab_updateSetDropdown();
+        updateSetDropdown();
     }
 
-    function vocab_updateSetDropdown() {
-        const selectedTheme = vocab_themeSelect.value;
-        vocab_setSelect.innerHTML = '';
-        vocab_setSelect2.innerHTML = '';
+    function updateSetDropdown() {
+        const selectedTheme = themeSelect.value;
+        setSelect.innerHTML = '';
+        setSelect2.innerHTML = '';
 
         const noneOption = document.createElement('option');
         noneOption.value = "";
         noneOption.textContent = "-- None --";
-        vocab_setSelect2.appendChild(noneOption);
-        
-        const setsInTheme = Object.keys(vocab_vocabSets).filter(setName => setName.startsWith(selectedTheme + '.') || setName === selectedTheme).sort();
+        setSelect2.appendChild(noneOption);
+
+        const setsInTheme = Object.keys(vocabSets).filter(setName => setName.startsWith(selectedTheme + '.') || setName === selectedTheme).sort();
+
         setsInTheme.forEach(setName => {
-            const option1 = document.createElement('option');
-            option1.value = setName;
-            option1.textContent = `${setName} (${vocab_vocabSets[setName].length} words)`;
-            vocab_setSelect.appendChild(option1);
-            
-            const option2 = option1.cloneNode(true);
-            vocab_setSelect2.appendChild(option2);
+             const option1 = document.createElement('option');
+              option1.value = setName;
+              option1.textContent = `${setName} (${vocabSets[setName].length} words)`;
+              setSelect.appendChild(option1);
+              
+              const option2 = option1.cloneNode(true);
+              setSelect2.appendChild(option2);
         });
     }
 
-    function vocab_generateTest() {
-        const set1 = vocab_setSelect.value;
-        const set2 = vocab_setSelect2.value;
-        if (!set1) return;
-        let combinedSet = [...vocab_vocabSets[set1]];
-        if (set2 && set2 !== "") combinedSet = combinedSet.concat(vocab_vocabSets[set2]);
+    function generateTest() {
+        const selectedSetName1 = setSelect.value;
+        const selectedSetName2 = setSelect2.value;
         
-        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.target, item])).values());
+        if (!selectedSetName1) return;
+
+        let combinedSet = [...vocabSets[selectedSetName1]];
+        if (selectedSetName2 && selectedSetName2 !== "") {
+            combinedSet = combinedSet.concat(vocabSets[selectedSetName2]);
+        }
+        
+        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.target, item])).values()); // CHANGED
         if (uniqueCombinedSet.length === 0) return;
 
         const shuffled = [...uniqueCombinedSet].sort(() => 0.5 - Math.random());
         
-        const targetQuestions = shuffled.slice(0, 5);
-        const englishQuestions = shuffled.slice(5, 10);
-        vocab_testBody.innerHTML = '';
+        const targetQuestionItems = shuffled.slice(0, 5); // CHANGED name for clarity
+        const englishQuestionItems = shuffled.slice(5, 10);
 
-        targetQuestions.forEach((item, index) => {
-            const row = vocab_testBody.insertRow();
-            row.innerHTML = `<td class="num-cell">${index + 1}</td><td>${item.target}</td><td class="answer-cell"><span class="answer">${item.english}</span></td>`;
-        });
-        englishQuestions.forEach((item, index) => {
-            const row = vocab_testBody.insertRow();
-            const rowNumber = targetQuestions.length + index + 1;
-            row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span class="answer">${item.target}</span></td><td>${item.english}</td>`;
-        });
-
-        // Setup print area with two copies of the table (FIXED FOR PRINTING)
-        const onScreenTable = document.querySelector('#vocab-test-container table');
-        // Clone the table for printing and remove answer visibility to ensure a clean printout
-        const tableToPrint = onScreenTable.cloneNode(true); 
-        tableToPrint.querySelectorAll('.answer').forEach(span => span.classList.remove('visible'));
+        testBody.innerHTML = '';
         
+        // Generate Target Language to English questions
+        targetQuestionItems.forEach((item, index) => { // CHANGED name for clarity
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="num-cell">${index + 1}</td>
+                <td>${item.target}</td>
+                <td class="answer-cell"><span class="answer">${item.english}</span></td>
+            `;
+            testBody.appendChild(row);
+        });
+
+        // Generate English to Target Language questions
+        englishQuestionItems.forEach((item, index) => {
+            const row = document.createElement('tr');
+            const rowNumber = targetQuestionItems.length + index + 1; // CHANGED name for clarity
+            row.innerHTML = `
+                <td class="num-cell">${rowNumber}</td>
+                <td class="answer-cell"><span class="answer">${item.target}</span></td>
+                <td>${item.english}</td>
+            `;
+            testBody.appendChild(row);
+        });
+        
+        const onScreenTable = document.querySelector('#test-container table');
+        const tableToPrint = onScreenTable.cloneNode(true); 
         const tableHeaderHTML = tableToPrint.querySelector('thead').outerHTML;
         const tableBodyHTML = tableToPrint.querySelector('tbody').innerHTML;
         const fullTableHTML = `<table>${tableHeaderHTML}${tableBodyHTML}</table>`;
 
-        vocab_printArea.innerHTML = `
+        printArea.innerHTML = `
             <div class="print-table-wrapper">${fullTableHTML}</div>
             <div class="print-table-wrapper">${fullTableHTML}</div>
         `;
         
-        vocab_testContainer.classList.remove('hide');
-        vocab_testControls.classList.remove('hide');
-        vocab_revealBtn.textContent = 'Reveal Answers';
-        document.querySelectorAll('#vocab-test-container .answer').forEach(span => span.classList.remove('visible'));
+        testContainer.classList.remove('hide');
+        testControls.classList.remove('hide');
+        revealBtn.textContent = 'Reveal Answers';
+        document.querySelectorAll('.answer').forEach(span => span.classList.remove('visible'));
     }
 
-    function vocab_revealAnswers() {
-        const answers = document.querySelectorAll('#vocab-test-container .answer');
+    function revealAnswers() {
+        const answers = document.querySelectorAll('.answer'); 
         if (answers.length === 0) return;
+        
         const isHidden = !answers[0].classList.contains('visible');
-        answers.forEach(span => span.classList.toggle('visible', isHidden));
-        vocab_revealBtn.textContent = isHidden ? 'Hide Answers' : 'Reveal Answers';
+        answers.forEach(span => {
+            span.classList.toggle('visible', isHidden);
+        });
+
+        revealBtn.textContent = isHidden ? 'Hide Answers' : 'Reveal Answers';
     }
 
 </script>
+
 </body>
 </html>
