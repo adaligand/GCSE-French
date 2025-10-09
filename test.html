@@ -36,13 +36,13 @@
             flex-grow: 1;
         }
         .controls-panel {
-            flex: 0 0 300px; /* Slightly wider control panel */
+            flex: 0 0 300px;
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
         .controls-panel h1 {
-            font-size: 1.5em; /* Smaller title for the side panel */
+            font-size: 1.5em;
             margin-bottom: 10px;
             margin-top: 0;
             color: #2c3e50;
@@ -87,7 +87,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 1.8 em; /* MUCH bigger table font */
+            font-size: 1.6em;
             table-layout: fixed;
         }
         th, td {
@@ -169,12 +169,14 @@
         </div>
 
         <div class="controls-panel">
-             <h1 id="title">Vocab List Generator</h1>
+             <h1 id="title">Vocabulary List Generator</h1>
              <div id="setup-controls" class="control-group hide">
                 <label for="theme-select">1. Choose Theme:</label>
                 <select id="theme-select"></select>
                 <label for="set-select">2. Choose Set:</label>
                 <select id="set-select"></select>
+                <label for="set-select-2">3. Combine with (Optional):</label>
+                <select id="set-select-2"></select>
                 <button id="generate-btn">Generate List</button>
             </div>
             <div id="test-controls" class="control-group hide">
@@ -192,6 +194,7 @@
     const setupControls = document.getElementById('setup-controls');
     const themeSelect = document.getElementById('theme-select');
     const setSelect = document.getElementById('set-select');
+    const setSelect2 = document.getElementById('set-select-2');
     const generateBtn = document.getElementById('generate-btn');
     const testContainer = document.getElementById('test-container');
     const testBody = document.getElementById('test-body');
@@ -269,24 +272,46 @@
     function updateSetDropdown() {
         const selectedTheme = themeSelect.value;
         setSelect.innerHTML = '';
-        Object.keys(vocabSets).sort().forEach(setName => {
-            if (setName.startsWith(selectedTheme + '.') || setName === selectedTheme) {
-                 const option = document.createElement('option');
-                 option.value = setName;
-                 option.textContent = `${setName} (${vocabSets[setName].length} words)`;
-                 setSelect.appendChild(option);
-            }
+        setSelect2.innerHTML = '';
+
+        // Add a default "None" option to the second dropdown
+        const noneOption = document.createElement('option');
+        noneOption.value = "";
+        noneOption.textContent = "-- None --";
+        setSelect2.appendChild(noneOption);
+
+        const setsInTheme = Object.keys(vocabSets).filter(setName => setName.startsWith(selectedTheme + '.') || setName === selectedTheme).sort();
+
+        setsInTheme.forEach(setName => {
+             const option1 = document.createElement('option');
+             option1.value = setName;
+             option1.textContent = `${setName} (${vocabSets[setName].length} words)`;
+             setSelect.appendChild(option1);
+             
+             const option2 = option1.cloneNode(true);
+             setSelect2.appendChild(option2);
         });
     }
 
     function generateTest() {
-        const selectedSetName = setSelect.value;
-        if (!selectedSetName) return;
+        const selectedSetName1 = setSelect.value;
+        const selectedSetName2 = setSelect2.value;
+        
+        if (!selectedSetName1) return;
 
-        const selectedSet = vocabSets[selectedSetName];
-        if (!selectedSet || selectedSet.length === 0) return;
+        let combinedSet = [...vocabSets[selectedSetName1]];
 
-        const shuffled = [...selectedSet].sort(() => 0.5 - Math.random());
+        // If a second set is chosen, add its words to the pool
+        if (selectedSetName2 && selectedSetName2 !== "") {
+            combinedSet = combinedSet.concat(vocabSets[selectedSetName2]);
+        }
+        
+        // Remove duplicates, in case the same word is in both sets
+        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.french, item])).values());
+
+        if (uniqueCombinedSet.length === 0) return;
+
+        const shuffled = [...uniqueCombinedSet].sort(() => 0.5 - Math.random());
         const testItems = shuffled.slice(0, 10);
 
         testBody.innerHTML = '';
