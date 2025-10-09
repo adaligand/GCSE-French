@@ -14,11 +14,11 @@
             justify-content: center;
             padding-top: 40px;
             min-height: 100vh;
-            font-size: 18px; /* Increased base font size */
+            font-size: 18px;
         }
         .container {
-            width: 90%;
-            max-width: 800px;
+            width: 95%; /* Increased from 90% */
+            max-width: 1200px; /* Increased from 800px */
             padding: 30px;
             background: white;
             border-radius: 12px;
@@ -64,7 +64,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            font-size: 1.1em; /* Increased table font size */
+            font-size: 1.1em;
         }
         th, td {
             border: 1px solid #ddd;
@@ -94,8 +94,12 @@
 
         /* --- PRINT STYLES --- */
         @media print {
+            @page {
+                size: landscape; /* Set page orientation to landscape */
+                margin: 1cm;
+            }
             body {
-                font-size: 12pt; /* Standard print font size */
+                font-size: 10pt;
                 padding: 0;
                 margin: 0;
             }
@@ -103,10 +107,13 @@
                 display: none !important;
             }
             #print-area {
-                display: block !important;
+                display: flex !important; /* Use flexbox for side-by-side layout */
+                justify-content: space-around;
+                gap: 20px;
+                width: 100%;
             }
             .print-table-wrapper {
-                height: 48vh; /* Each table wrapper takes up about half the page height */
+                width: 48%; /* Each table wrapper takes up about half the page width */
                 page-break-inside: avoid;
                 box-sizing: border-box;
             }
@@ -270,8 +277,12 @@
         }
 
         // 2. Generate the hidden print-area content
-        const tableHeaderHTML = document.querySelector('#test-container table thead').outerHTML;
-        const tableBodyHTML = testBody.innerHTML;
+        const onScreenTable = document.querySelector('#test-container table');
+        // We need to clone the table to preserve the on-screen version
+        const tableToPrint = onScreenTable.cloneNode(true); 
+        // We must query the cloned table for its elements
+        const tableHeaderHTML = tableToPrint.querySelector('thead').outerHTML;
+        const tableBodyHTML = tableToPrint.querySelector('tbody').innerHTML;
         const fullTableHTML = `<h2>${selectedSetName}</h2><table>${tableHeaderHTML}${tableBodyHTML}</table>`;
 
         printArea.innerHTML = `
@@ -286,7 +297,8 @@
     }
 
     function revealAnswers() {
-        const answers = document.querySelectorAll('.answer'); // This selects from all 3 tables
+        // This selector gets answers from both the on-screen table and the hidden print tables
+        const answers = document.querySelectorAll('.answer'); 
         if (answers.length === 0) return;
         
         const isHidden = !answers[0].classList.contains('visible');
