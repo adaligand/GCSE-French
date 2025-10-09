@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Language</title>
+    <title>Language Practice Hub</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         /* General Styles */
@@ -101,8 +101,8 @@
                 background: white !important;
             }
             @page {
-                size: A4; /* Use standard size */
-                margin: 1cm; /* Minimal margins */
+                size: A4; 
+                margin: 1cm; 
             }
 
             /* 2. Hide everything by default */
@@ -118,6 +118,8 @@
                 left: 0;
                 width: 100%;
                 max-width: none;
+                /* Add a bit of padding to stop content touching the edge of the page */
+                padding: 0.5cm; 
             }
             .vocab-main-wrapper { 
                 display: block !important; 
@@ -134,8 +136,8 @@
                 margin: 0;
             }
             .print-table-wrapper {
-                width: 48%; /* Ensure two columns fit */
-                page-break-inside: avoid; /* Prevent tables from splitting */
+                width: 48%; 
+                page-break-inside: avoid; 
                 box-sizing: border-box;
             }
             
@@ -146,14 +148,16 @@
             
             /* 6. Style the print tables */
             #vocab-print-area table { 
-                font-size: 16pt; /* Increase font size for better readability on page */
+                font-size: 14pt; /* Slightly smaller to fit more content, but still legible */
                 border-collapse: collapse; 
                 width: 100%; 
                 margin: 0;
+                /* Critical fix: make sure table uses the full space */
+                table-layout: fixed; 
             }
             #vocab-print-area th, #vocab-print-area td { 
                 border: 1px solid #000; 
-                padding: 10px; 
+                padding: 8px; /* Reduced padding */
                 line-height: 1.2;
             }
             #vocab-print-area .answer-cell span { 
@@ -349,36 +353,40 @@
         
         let contentHTML = '';
 
-        // Check if the content is a Google Slides URL (for embedding)
+        // FIX: Robust Google Slides embedding
         if (contentLink && contentLink.toLowerCase().includes('google.com/presentation')) {
             
-            // 1. Convert to the base /embed URL
-            let embedUrl = contentLink.replace('/present', '/embed').replace('/edit', '/embed');
+            // Regex to extract the FILE ID (e.g., 1HtuTfE4-pW24d6RdK-qVz9zDfnkNXyleL9sKWrQefEk)
+            const fileIdMatch = contentLink.match(/d\/([a-zA-Z0-9_-]+)/);
+            
+            // Regex to extract the specific SLIDE ID (e.g., id.p2)
+            const slideIdMatch = contentLink.match(/slide=(id\.[a-zA-Z0-9]+)/);
+            
+            if (fileIdMatch) {
+                const fileId = fileIdMatch[1];
+                let embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&delayms=3000`;
 
-            // 2. Extract the slide ID parameter (e.g., "?slide=id.p2")
-            const slideIdMatch = contentLink.match(/(\?slide=id\.[a-zA-Z0-9]+)/);
-            
-            if (slideIdMatch) {
-                // If a slide ID is found, append it to the embed URL with necessary parameters
-                const slideIdParam = slideIdMatch[1];
-                
-                // Construct the final source URL for the iframe
-                embedUrl = embedUrl.split('?')[0] + '?start=false&loop=false&delayms=3000' + slideIdParam;
+                if (slideIdMatch) {
+                    const slideId = slideIdMatch[1];
+                    // Append the slide ID parameter to force it to that specific slide
+                    embedUrl += `&${slideId}`; 
+                }
+
+                // Use an iframe to embed the slide
+                contentHTML = `
+                    <iframe 
+                        src="${embedUrl}" 
+                        style="width:100%; height:500px; border:none; background:#f0f0f0;" 
+                        allowfullscreen="true" 
+                        mozallowfullscreen="true" 
+                        webkitallowfullscreen="true">
+                    </iframe>
+                `;
             } else {
-                // If no specific slide ID, just use the basic embed URL
-                embedUrl = embedUrl.split('?')[0] + '?start=false&loop=false&delayms=3000';
+                 // Fallback if the link is a slides link but the ID couldn't be parsed
+                 contentHTML = `<div class="content">Error parsing Google Slides link: ${contentLink}</div>`;
             }
-            
-            // Use an iframe to embed the slide
-            contentHTML = `
-                <iframe 
-                    src="${embedUrl}" 
-                    style="width:100%; height:500px; border:none; background:#f0f0f0;" 
-                    allowfullscreen="true" 
-                    mozallowfullscreen="true" 
-                    webkitallowfullscreen="true">
-                </iframe>
-            `;
+
         } else {
             // Display as regular content (for reading practice or plain text)
             contentHTML = `<div class="content">${contentLink}</div>`;
@@ -497,7 +505,7 @@
             row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span class="answer">${item.target}</span></td><td>${item.english}</td>`;
         });
 
-        // Setup print area with two copies of the table (FIXED FOR PRINTING)
+        // Setup print area with two copies of the table
         const onScreenTable = document.querySelector('#vocab-test-container table');
         // Clone the table for printing and remove answer visibility to ensure a clean printout
         const tableToPrint = onScreenTable.cloneNode(true); 
@@ -507,6 +515,7 @@
         const tableBodyHTML = tableToPrint.querySelector('tbody').innerHTML;
         const fullTableHTML = `<table>${tableHeaderHTML}${tableBodyHTML}</table>`;
 
+        // Inject content into the print area
         vocab_printArea.innerHTML = `
             <div class="print-table-wrapper">${fullTableHTML}</div>
             <div class="print-table-wrapper">${fullTableHTML}</div>
