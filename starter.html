@@ -24,7 +24,7 @@
             background: #fff;
             padding: 25px 30px;
             border-radius: 12px;
-            box-shadow: 0 4px B2px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         h1, h2 { text-align: center; color: #333; }
         .hide { display: none !important; }
@@ -66,13 +66,16 @@
         #question-display { border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; min-height: 400px; background-color: #fafafa; overflow: hidden; display: flex; flex-direction: column; }
         #question-display iframe { width: 100%; height: 500px; border-radius: 8px; border: none; }
         
-        /* Vocab Test Styles */
+        /* Vocab Test Styles (Restored to two-panel layout) */
         .vocab-main-wrapper { display: flex; gap: 30px; margin-top: 20px; }
         .vocab-test-panel { flex-grow: 1; }
         .vocab-controls-panel { flex: 0 0 300px; display: flex; flex-direction: column; gap: 15px; }
         .vocab-control-group { background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 1.2em; table-layout: fixed; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; overflow-wrap: break-word; }
+        th { background-color: #f9f9f9; }
+        th:first-child, td.num-cell { width: 60px; text-align: center; }
+        td.num-cell { font-weight: bold; color: #7f8c8d; }
         .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
         .answer-cell span.visible { visibility: visible; }
     </style>
@@ -93,17 +96,11 @@
 
     <div id="practice-section" class="hide">
         <h1 id="practice-title">Practice Section</h1>
+        <input type="hidden" id="current-practice-type" value="">
         <div class="practice-controls">
             <div class="practice-control-group">
-                <label for="exam-type-select">Exam Type:</label>
-                <select id="exam-type-select" disabled>
-                    <option value="Reading">Reading</option>
-                    <option value="Listening">Listening</option>
-                </select>
-            </div>
-            <div class="practice-control-group">
                 <label for="topic-select">Choose a Topic:</label>
-                <select id="topic-select"><option>Loading...</option></select>
+                <select id="topic-select" class="hide"><option>No Topics Loaded</option></select>
             </div>
             <div class="practice-control-group practice-button-container">
                  <button id="generate-practice-btn">Generate Question</button>
@@ -111,7 +108,7 @@
         </div>
         <div id="question-display">
             <h2>Your question will appear here</h2>
-            <p>Select a topic and click "Generate Question".</p>
+            <p>Click "Generate Question" to begin.</p>
         </div>
         <button class="back-btn">Back to Main Menu</button>
     </div>
@@ -155,6 +152,7 @@
     const mainMenu = document.getElementById('main-menu');
     const practiceSection = document.getElementById('practice-section');
     const vocabSection = document.getElementById('vocab-section');
+    const currentPracticeTypeInput = document.getElementById('current-practice-type');
 
     document.getElementById('reading-btn').addEventListener('click', () => showPractice('Reading'));
     document.getElementById('listening-btn').addEventListener('click', () => showPractice('Listening'));
@@ -176,8 +174,7 @@
         vocabSection.classList.add('hide');
         
         document.getElementById('practice-title').textContent = `${type} Practice`;
-        practice_typeSelect.value = type;
-        practice_populateTopics(); // Re-populate topics based on the selected type
+        currentPracticeTypeInput.value = type; // Store the selected type in the hidden field
     }
 
     function showVocabTest() {
@@ -193,8 +190,8 @@
     });
 
     // --- READING/LISTENING PRACTICE LOGIC ---
-    const practice_typeSelect = document.getElementById('exam-type-select');
-    const practice_topicSelect = document.getElementById('topic-select');
+    // NOTE: 'topic-select' is ignored for filtering since your sheet doesn't contain a Topic column.
+    const practice_topicSelect = { value: null }; // Mock object for compatibility
     const practice_generateBtn = document.getElementById('generate-practice-btn');
     const practice_questionDisplay = document.getElementById('question-display');
     let practice_allQuestions = [];
@@ -203,43 +200,39 @@
         Papa.parse(practiceSheetUrl, {
             download: true, header: true,
             complete: (results) => {
-                practice_allQuestions = results.data.filter(q => q.Type && q.Topic && q.Content);
-                practice_populateTopics();
+                // Filter out rows that are completely empty
+                practice_allQuestions = results.data.filter(q => q.skills && q.Title && q.Content);
             },
             error: () => { practice_questionDisplay.innerHTML = '<h2>Error</h2><p>Could not load the practice questions sheet.</p>'; }
         });
     }
 
-    practice_typeSelect.addEventListener('change', practice_populateTopics);
     practice_generateBtn.addEventListener('click', practice_generateQuestion);
 
-    function practice_populateTopics() {
-        const selectedType = practice_typeSelect.value;
-        const topics = [...new Set(practice_allQuestions.filter(q => q.Type === selectedType).map(q => q.Topic))];
-        practice_topicSelect.innerHTML = '';
-        topics.sort().forEach(topic => {
-            const option = document.createElement('option');
-            option.value = topic;
-            option.textContent = topic;
-            practice_topicSelect.appendChild(option);
-        });
-    }
-
     function practice_generateQuestion() {
-        const selectedType = practice_typeSelect.value;
-        const selectedTopic = practice_topicSelect.value;
-        const relevantQuestions = practice_allQuestions.filter(q => q.Type === selectedType && q.Topic === selectedTopic);
+        // Read selected type from the hidden input field
+        const selectedType = currentPracticeTypeInput.value;
+        
+        // Filter questions based only on the 'skills' column, which must match the selected type
+        const relevantQuestions = practice_allQuestions.filter(q => q.skills === selectedType);
 
         if (relevantQuestions.length === 0) {
-            practice_questionDisplay.innerHTML = '<h2>No Questions Found</h2><p>No questions matched your selection.</p>';
+            practice_questionDisplay.innerHTML = '<h2>No Questions Found</h2><p>No questions matched your selection. Ensure your sheet has data in the "skills" column matching your selection (' + selectedType + ').</p>';
             return;
         }
 
+        // Pick a random question from the filtered list
         const randomQuestion = relevantQuestions[Math.floor(Math.random() * relevantQuestions.length)];
-        practice_questionDisplay.innerHTML = `<h2>${randomQuestion.Title || 'Question'}</h2><div class="content">${randomQuestion.Content}</div>`;
+
+        practice_questionDisplay.innerHTML = `
+            <h2>${randomQuestion.Title || 'Question'}</h2>
+            <div class="content">
+                ${randomQuestion.Content}
+            </div>
+        `;
     }
 
-    // --- VOCABULARY TEST LOGIC ---
+    // --- VOCABULARY TEST LOGIC (No changes here) ---
     const vocab_themeSelect = document.getElementById('theme-select');
     const vocab_setSelect = document.getElementById('set-select');
     const vocab_setSelect2 = document.getElementById('set-select-2');
@@ -248,7 +241,6 @@
     const vocab_testBody = document.getElementById('test-body');
     const vocab_testControls = document.getElementById('test-controls');
     const vocab_revealBtn = document.getElementById('reveal-btn');
-    const vocab_setupControls = document.getElementById('setup-controls');
     let vocab_vocabSets = {};
     const vocab_themeMap = { '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood', '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism' };
 
