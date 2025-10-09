@@ -67,7 +67,7 @@
         #question-display { border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; min-height: 400px; background-color: #fafafa; overflow: hidden; display: flex; flex-direction: column; }
         #question-display iframe { width: 100%; height: 500px; border-radius: 8px; border: none; }
         
-        /* VOCABULARY TEST STYLES (FROM YOUR STANDALONE CODE) */
+        /* VOCABULARY TEST STYLES */
         .vocab-main-wrapper { display: flex; gap: 30px; margin-top: 20px; }
         .vocab-test-panel { flex-grow: 1; }
         .vocab-controls-panel { flex: 0 0 300px; display: flex; flex-direction: column; gap: 15px; }
@@ -92,32 +92,75 @@
         .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
         .answer-cell span.visible { visibility: visible; }
 
-        /* PRINT STYLES (Customized for two-column print out) */
+        /* --- PRINT STYLES --- */
         @media print {
-             /* Hide everything except the print-area on the vocab page, or the whole section on other pages */
-            body > .container > div:not(#vocab-section) { display: none !important; }
-            #vocab-section { display: block !important; }
-            .vocab-controls-panel, .back-btn { display: none !important; }
+            /* 1. Reset Print Body & Page */
+            body { 
+                padding: 0; 
+                margin: 0; 
+                background: white !important;
+            }
+            @page {
+                size: A4; /* Use standard size */
+                margin: 1cm; /* Minimal margins */
+            }
+
+            /* 2. Hide everything by default */
+            .container, #main-menu, #practice-section, #vocab-controls-panel { 
+                display: none !important; 
+            }
             
-            /* Apply custom print layout */
-            .vocab-main-wrapper { display: block !important; }
+            /* 3. Show only the print area container and set it to fill the width */
+            #vocab-section { 
+                display: block !important; 
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                max-width: none;
+            }
+            .vocab-main-wrapper { 
+                display: block !important; 
+                width: 100%;
+                margin: 0;
+            }
+            
+            /* 4. Display the print-area tables in two columns */
             #vocab-print-area { 
                 display: flex !important;
-                justify-content: space-around;
+                justify-content: space-between;
                 gap: 20px;
                 width: 100%;
+                margin: 0;
             }
             .print-table-wrapper {
-                width: 48%;
-                page-break-inside: avoid;
+                width: 48%; /* Ensure two columns fit */
+                page-break-inside: avoid; /* Prevent tables from splitting */
                 box-sizing: border-box;
             }
-            #vocab-test-container { display: none !important; } /* Hide main test table */
             
-            /* Print table formatting */
-            #vocab-print-area table { font-size: 11pt; border-collapse: collapse; width: 100%; }
-            #vocab-print-area th, #vocab-print-area td { border: 1px solid #000; padding: 8px; }
-            #vocab-print-area .answer-cell span { visibility: hidden !important; } /* Ensure answers are hidden */
+            /* 5. Hide the on-screen test table and controls */
+            #vocab-test-container, .vocab-controls-panel, .back-btn { 
+                display: none !important; 
+            }
+            
+            /* 6. Style the print tables */
+            #vocab-print-area table { 
+                font-size: 16pt; /* Increase font size for better readability on page */
+                border-collapse: collapse; 
+                width: 100%; 
+                margin: 0;
+            }
+            #vocab-print-area th, #vocab-print-area td { 
+                border: 1px solid #000; 
+                padding: 10px; 
+                line-height: 1.2;
+            }
+            #vocab-print-area .answer-cell span { 
+                visibility: hidden !important; 
+            } 
+            /* Ensure numbers are centered */
+            #vocab-print-area th:first-child, #vocab-print-area td.num-cell { width: 60px; text-align: center; }
         }
     </style>
 </head>
@@ -217,15 +260,15 @@
         vocabSection.classList.add('hide');
         
         document.getElementById('practice-title').textContent = `${type} Practice`;
-        currentPracticeTypeInput.value = type; // Store the selected type in the hidden field
-        practice_populateTopics(); // Populate topics specific to the selected skill (type)
+        currentPracticeTypeInput.value = type; 
+        practice_populateTopics();
     }
 
     function showVocabTest() {
         mainMenu.classList.add('hide');
         practiceSection.classList.add('hide');
         vocabSection.classList.remove('hide');
-        // Ensure initial vocab controls are visible after loading data
+        
         if (Object.keys(vocab_vocabSets).length > 0) {
             document.getElementById('vocab-setup-controls').classList.remove('hide');
         }
@@ -252,7 +295,7 @@
                     .map(q => ({
                         Skill: q.Skill ? q.Skill.trim() : '', 
                         Topic: q.Topic ? q.Topic.trim() : '',
-                        Title: q.Topic ? q.Topic.trim() : 'Question', // Use Topic as Title
+                        Title: q.Topic ? q.Topic.trim() : 'Question', 
                         Content: q.Content || ''
                     }))
                     .filter(q => q.Skill && q.Topic && q.Content); 
@@ -273,9 +316,9 @@
         // FIX: Filter by q.Skill instead of q.skills
         const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
         
-        practice_topicSelect.innerHTML = ''; // Clear "Loading..."
+        practice_topicSelect.innerHTML = ''; 
         topics.sort().forEach(topic => {
-            if (topic) { // Ensure topic is not empty/null
+            if (topic) { 
                 const option = document.createElement('option');
                 option.value = topic;
                 option.textContent = topic;
@@ -292,7 +335,6 @@
         const selectedType = currentPracticeTypeInput.value;
         const selectedTopic = practice_topicSelect.value;
         
-        // FIX: Filter by q.Skill instead of q.skills
         const relevantQuestions = practice_allQuestions.filter(q => 
             q.Skill === selectedType && q.Topic === selectedTopic
         );
@@ -302,18 +344,53 @@
             return;
         }
 
-        // Pick a random question from the filtered list
         const randomQuestion = relevantQuestions[Math.floor(Math.random() * relevantQuestions.length)];
+        const contentLink = randomQuestion.Content; 
+        
+        let contentHTML = '';
+
+        // Check if the content is a Google Slides URL (for embedding)
+        if (contentLink && contentLink.toLowerCase().includes('google.com/presentation')) {
+            
+            // 1. Convert to the base /embed URL
+            let embedUrl = contentLink.replace('/present', '/embed').replace('/edit', '/embed');
+
+            // 2. Extract the slide ID parameter (e.g., "?slide=id.p2")
+            const slideIdMatch = contentLink.match(/(\?slide=id\.[a-zA-Z0-9]+)/);
+            
+            if (slideIdMatch) {
+                // If a slide ID is found, append it to the embed URL with necessary parameters
+                const slideIdParam = slideIdMatch[1];
+                
+                // Construct the final source URL for the iframe
+                embedUrl = embedUrl.split('?')[0] + '?start=false&loop=false&delayms=3000' + slideIdParam;
+            } else {
+                // If no specific slide ID, just use the basic embed URL
+                embedUrl = embedUrl.split('?')[0] + '?start=false&loop=false&delayms=3000';
+            }
+            
+            // Use an iframe to embed the slide
+            contentHTML = `
+                <iframe 
+                    src="${embedUrl}" 
+                    style="width:100%; height:500px; border:none; background:#f0f0f0;" 
+                    allowfullscreen="true" 
+                    mozallowfullscreen="true" 
+                    webkitallowfullscreen="true">
+                </iframe>
+            `;
+        } else {
+            // Display as regular content (for reading practice or plain text)
+            contentHTML = `<div class="content">${contentLink}</div>`;
+        }
 
         practice_questionDisplay.innerHTML = `
             <h2>${randomQuestion.Title || 'Question'}</h2>
-            <div class="content">
-                ${randomQuestion.Content}
-            </div>
+            ${contentHTML}
         `;
     }
 
-    // --- VOCABULARY TEST LOGIC (Restored from your standalone code) ---
+    // --- VOCABULARY TEST LOGIC ---
     const vocab_themeSelect = document.getElementById('vocab-theme-select');
     const vocab_setSelect = document.getElementById('vocab-set-select');
     const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
@@ -334,7 +411,6 @@
             complete: (results) => {
                 let currentSetName = null, currentSetWords = [];
                 results.data.forEach(row => {
-                    // Uses columns A, C, and D based on your standalone code logic
                     const setNameInRow = row[0] ? row[0].trim() : '';
                     const targetWord = row[2] ? row[2].trim() : '';
                     const englishWord = row[3] ? row[3].trim() : '';
@@ -351,7 +427,6 @@
                 if (currentSetName && currentSetWords.length > 0) vocab_vocabSets[currentSetName] = currentSetWords;
                 if (Object.keys(vocab_vocabSets).length > 0) {
                     vocab_initializeSelectors();
-                    // vocab_setupControls.classList.remove('hide'); // Only unhide if vocab is selected in main menu
                 }
             }
         });
@@ -422,9 +497,12 @@
             row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span class="answer">${item.target}</span></td><td>${item.english}</td>`;
         });
 
-        // Setup print area with two copies of the table
+        // Setup print area with two copies of the table (FIXED FOR PRINTING)
         const onScreenTable = document.querySelector('#vocab-test-container table');
+        // Clone the table for printing and remove answer visibility to ensure a clean printout
         const tableToPrint = onScreenTable.cloneNode(true); 
+        tableToPrint.querySelectorAll('.answer').forEach(span => span.classList.remove('visible'));
+        
         const tableHeaderHTML = tableToPrint.querySelector('thead').outerHTML;
         const tableBodyHTML = tableToPrint.querySelector('tbody').innerHTML;
         const fullTableHTML = `<table>${tableHeaderHTML}${tableBodyHTML}</table>`;
@@ -449,6 +527,5 @@
     }
 
 </script>
-
 </body>
 </html>
