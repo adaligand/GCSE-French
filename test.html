@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Test</title>
+    <title>Vocabulary List Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
@@ -23,8 +23,24 @@
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
-        #loading-message {
+        h1, h2, #loading-message {
             text-align: center;
+        }
+        
+        /* Styles for the new spreadsheet selector */
+        #spreadsheet-selector {
+            text-align: center;
+        }
+        #spreadsheet-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        #spreadsheet-buttons button {
+            font-size: 1.2em;
+            padding: 15px 30px;
         }
         
         .main-content-wrapper {
@@ -119,63 +135,48 @@
             display: none;
         }
 
-        /* --- PRINT STYLES --- */
         @media print {
             @page {
                 size: landscape;
                 margin: 1cm;
             }
-            body {
-                font-size: 10pt;
-                padding: 0;
-                margin: 0;
-            }
-            .container > *:not(#print-area) {
-                display: none !important;
-            }
-            #print-area {
-                display: flex !important;
-                justify-content: space-around;
-                gap: 20px;
-                width: 100%;
-            }
-            .print-table-wrapper {
-                width: 48%;
-                page-break-inside: avoid;
-                box-sizing: border-box;
-            }
+            body { font-size: 10pt; padding: 0; margin: 0; }
+            .container > *:not(#print-area) { display: none !important; }
+            #print-area { display: flex !important; justify-content: space-around; gap: 20px; width: 100%; }
+            .print-table-wrapper { width: 48%; page-break-inside: avoid; box-sizing: border-box; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <p id="loading-message" style="text-align:center;">Loading sets from your spreadsheet...</p>
+    <div id="spreadsheet-selector">
+        <h2>Select a Class/Language</h2>
+        <div id="spreadsheet-buttons">
+            </div>
+    </div>
 
-    <div class="main-content-wrapper">
+    <p id="loading-message" class="hide">Loading sets from your spreadsheet...</p>
+
+    <div class="main-content-wrapper hide">
         <div class="test-panel">
             <div id="test-container" class="hide">
                 <table>
                     <thead>
-                        <tr>
-                            <th>No.</th>
-                            <th>Target Language</th>
-                            <th>English</th>
-                        </tr>
+                        <tr><th>No.</th><th>French</th><th>English</th></tr>
                     </thead>
                     <tbody id="test-body"></tbody>
                 </table>
             </div>
         </div>
-
         <div class="controls-panel">
-             <h1 id="title">Vocabulary Test</h1>
-             <div id="setup-controls" class="control-group hide">
+             <h1 id="title">Vocabulary List Generator</h1>
+             <div id="setup-controls" class="control-group">
                 <label for="theme-select">1. Choose Theme:</label>
                 <select id="theme-select"></select>
                 <label for="set-select">2. Choose Set:</label>
                 <select id="set-select"></select>
-                <label for="set-select-2">3. 2nd set (Optional):</label>
+                <label for="set-select-2">3. Combine with (Optional):</label>
                 <select id="set-select-2"></select>
                 <button id="generate-btn">Generate List</button>
             </div>
@@ -190,10 +191,20 @@
 </div>
 
 <script>
+    // --- STEP 1: EDIT YOUR SPREADSHEET LINKS HERE ---
+    const spreadsheetMap = {
+        'French GCSE': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv',
+        'French A Level': 'YOUR_SPANISH_SHEET_URL_HERE',
+        'German GCSE': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTlddh1-sO5-s5CPJt_a1H1ltX9orRCFvosUPVBJIqjxXc0nB3c4-f19sUNF5s6lIof7TnBIevleWJA/pub?output=csv'
+    };
+
     const loadingMessage = document.getElementById('loading-message');
-    const setupControls = document.getElementById('setup-controls');
+    const spreadsheetSelector = document.getElementById('spreadsheet-selector');
+    const spreadsheetButtons = document.getElementById('spreadsheet-buttons');
+    const mainContentWrapper = document.querySelector('.main-content-wrapper');
     const themeSelect = document.getElementById('theme-select');
     const setSelect = document.getElementById('set-select');
+    // ... (rest of the element selectors are the same)
     const setSelect2 = document.getElementById('set-select-2');
     const generateBtn = document.getElementById('generate-btn');
     const testContainer = document.getElementById('test-container');
@@ -211,12 +222,32 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        const params = new URLSearchParams(window.location.search);
-        const sheetUrl = params.get('sheet');
-        if (!sheetUrl) {
-            loadingMessage.textContent = "⚠️ Please provide a Google Sheet URL in the '?sheet=' parameter.";
-            return;
+        // Create buttons for each spreadsheet in the map
+        for (const name in spreadsheetMap) {
+            const button = document.createElement('button');
+            button.textContent = name;
+            button.addEventListener('click', () => {
+                const url = spreadsheetMap[name];
+                if (url.includes('YOUR_')) {
+                    alert(`Please edit the script to replace the placeholder URL for "${name}".`);
+                    return;
+                }
+                spreadsheetSelector.classList.add('hide');
+                loadingMessage.classList.remove('hide');
+                loadAndParseSheet(url);
+            });
+            spreadsheetButtons.appendChild(button);
         }
+
+        generateBtn.addEventListener('click', generateTest);
+        revealBtn.addEventListener('click', revealAnswers);
+        themeSelect.addEventListener('change', updateSetDropdown);
+        printBtn.addEventListener('click', () => window.print());
+    });
+
+    function loadAndParseSheet(sheetUrl) {
+        // Reset state for new sheet
+        vocabSets = {};
 
         Papa.parse(sheetUrl, {
             download: true, header: false, skipEmptyLines: true,
@@ -243,19 +274,14 @@
                 if (Object.keys(vocabSets).length > 0) {
                     initializeSelectors();
                     loadingMessage.classList.add('hide');
-                    setupControls.classList.remove('hide');
+                    mainContentWrapper.classList.remove('hide');
                 } else {
-                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check Columns A, C, and D.";
+                    loadingMessage.textContent = "⚠️ No vocabulary sets found. Check sheet columns.";
                 }
             },
             error: () => { loadingMessage.textContent = "⚠️ Failed to load spreadsheet."; }
         });
-
-        generateBtn.addEventListener('click', generateTest);
-        revealBtn.addEventListener('click', revealAnswers);
-        themeSelect.addEventListener('change', updateSetDropdown);
-        printBtn.addEventListener('click', () => window.print());
-    });
+    }
 
     function initializeSelectors() {
         const themes = [...new Set(Object.keys(vocabSets).map(setName => setName.split('.')[0]))];
@@ -286,7 +312,6 @@
              option1.value = setName;
              option1.textContent = `${setName} (${vocabSets[setName].length} words)`;
              setSelect.appendChild(option1);
-             
              const option2 = option1.cloneNode(true);
              setSelect2.appendChild(option2);
         });
@@ -295,7 +320,6 @@
     function generateTest() {
         const selectedSetName1 = setSelect.value;
         const selectedSetName2 = setSelect2.value;
-        
         if (!selectedSetName1) return;
 
         let combinedSet = [...vocabSets[selectedSetName1]];
@@ -307,34 +331,21 @@
         if (uniqueCombinedSet.length === 0) return;
 
         const shuffled = [...uniqueCombinedSet].sort(() => 0.5 - Math.random());
-        
-        // --- NEW LOGIC TO PREVENT OVERLAP ---
-        // Select two distinct groups of up to 5 words each
         const frenchQuestionItems = shuffled.slice(0, 5);
         const englishQuestionItems = shuffled.slice(5, 10);
 
         testBody.innerHTML = '';
         
-        // Generate French to English questions
         frenchQuestionItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="num-cell">${index + 1}</td>
-                <td>${item.french}</td>
-                <td class="answer-cell"><span class="answer">${item.english}</span></td>
-            `;
+            row.innerHTML = `<td class="num-cell">${index + 1}</td><td>${item.french}</td><td class="answer-cell"><span class="answer">${item.english}</span></td>`;
             testBody.appendChild(row);
         });
 
-        // Generate English to French questions
         englishQuestionItems.forEach((item, index) => {
             const row = document.createElement('tr');
             const rowNumber = frenchQuestionItems.length + index + 1;
-            row.innerHTML = `
-                <td class="num-cell">${rowNumber}</td>
-                <td class="answer-cell"><span class="answer">${item.french}</span></td>
-                <td>${item.english}</td>
-            `;
+            row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span class="answer">${item.french}</span></td><td>${item.english}</td>`;
             testBody.appendChild(row);
         });
         
@@ -363,10 +374,8 @@
         answers.forEach(span => {
             span.classList.toggle('visible', isHidden);
         });
-
         revealBtn.textContent = isHidden ? 'Hide Answers' : 'Reveal Answers';
     }
-
 </script>
 
 </body>
