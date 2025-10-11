@@ -6,13 +6,14 @@
     <title>GCSE Speaking Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
-        .container {width: 90%; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .container { width: 90%; max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
         .section { background-color: #fdfdfd; border: 1px solid #dee2e6; border-radius: 5px; padding: 20px; }
         .config-grid, .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .theme-grid label { display: flex; align-items: center; gap: 8px; font-weight: normal; }
         .theme-grid input { width: 1.3em; height: 1.3em; }
-        .initial-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; margin-bottom: 25px; }
+        /* MODIFIED: Reduced min-width to allow four columns on smaller screens */
+        .initial-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 25px; }
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         input[type="text"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
@@ -46,7 +47,7 @@
         .rp-config-item label { display: inline-block; margin-bottom: 0; flex-shrink: 0; }
         .rp-config-item select { width: auto; flex-grow: 1; }
         .rp-config-container { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .exclude-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 40px; }
+        .exclude-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px 40px; }
         .exclude-column { display: flex; flex-direction: column; gap: 15px; }
         .exclude-item { display: flex; align-items: center; gap: 10px; }
         .exclude-item label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0;}
@@ -84,14 +85,14 @@
                 <p>Enter card numbers to exclude, separated by commas (e.g., 1, 5, 9).</p>
                 <div class="exclude-grid">
                     <div class="exclude-column">
-                        <div class="exclude-item"><label for="exclude-ra-f-input">Foundation RA </label><input type="text" id="exclude-ra-f-input" placeholder="e.g., 2, 6"></div>
-                        <div class="exclude-item"><label for="exclude-rp-f-input">Foundation RP </label><input type="text" id="exclude-rp-f-input" placeholder="e.g., 1, 4"></div>
-                        <div class="exclude-item"><label for="exclude-pt-f-input">Foundation PT</label><input type="text" id="exclude-pt-f-input" placeholder="e.g., 3, 8"></div>
+                        <div class="exclude-item"><label for="exclude-ra-f-input"> RA (Foundation)</label><input type="text" id="exclude-ra-f-input" placeholder="e.g., 2, 6"></div>
+                        <div class="exclude-item"><label for="exclude-rp-f-input"> RP (Foundation)</label><input type="text" id="exclude-rp-f-input" placeholder="e.g., 1, 4"></div>
+                        <div class="exclude-item"><label for="exclude-pt-f-input"> PT (Foundation)</label><input type="text" id="exclude-pt-f-input" placeholder="e.g., 3, 8"></div>
                     </div>
                     <div class="exclude-column">
-                        <div class="exclude-item"><label for="exclude-ra-h-input">Higher RA</label><input type="text" id="exclude-ra-h-input" placeholder="e.g., 2, 6"></div>
-                        <div class="exclude-item"><label for="exclude-rp-h-input">Higher RP</label><input type="text" id="exclude-rp-h-input" placeholder="e.g., 1, 4"></div>
-                        <div class="exclude-item"><label for="exclude-pt-h-input">Higher PT</label><input type="text" id="exclude-pt-h-input" placeholder="e.g., 3, 8"></div>
+                        <div class="exclude-item"><label for="exclude-ra-h-input"> RA (Higher)</label><input type="text" id="exclude-ra-h-input" placeholder="e.g., 2, 6"></div>
+                        <div class="exclude-item"><label for="exclude-rp-h-input"> RP (Higher)</label><input type="text" id="exclude-rp-h-input" placeholder="e.g., 1, 4"></div>
+                        <div class="exclude-item"><label for="exclude-pt-h-input"> PT (Higher)</label><input type="text" id="exclude-pt-h-input" placeholder="e.g., 3, 8"></div>
                     </div>
                 </div>
             </div>
@@ -558,7 +559,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     autoAllocateBtn.addEventListener('click', () => {
-        // MODIFIED: Removed the confirmation pop-up
+        if (!confirm("This will clear any existing card allocations and re-run the process for all students with a selected theme. Continue?")) {
+            return;
+        }
+
         allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
 
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
