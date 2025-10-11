@@ -387,19 +387,23 @@ function practice_generateQuestion() {
 
     if (originalUrl && originalUrl.includes('google.com/presentation')) {
         const fileIdMatch = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        
+        // MODIFIED: This regex now looks for EITHER '?' or '#' before 'slide='
+        const slideIdMatch = originalUrl.match(/[?#]slide=id\.([a-zA-Z0-9_.-]+)/);
 
         if (fileIdMatch) {
             const fileId = fileIdMatch[1];
-            const slideIdMatch = originalUrl.match(/#slide=id\.([a-zA-Z0-9_.-]+)/);
-            
             let embedUrl;
             let presentUrl;
 
             if (slideIdMatch) {
+                // A specific slide ID was found
                 const slideId = `id.${slideIdMatch[1]}`;
                 embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
+                // The presentation link format must use a hash for navigation
                 presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
             } else {
+                // No slide ID, link to the start
                 embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false`;
                 presentUrl = `https://docs.google.com/presentation/d/${fileId}/present`;
             }
@@ -476,18 +480,37 @@ function vocab_generateTest() {
         combined = combined.concat(vocab_vocabSets[set2]);
     }
     
-    combined = Array.from(new Map(combined.map(item => [item.target, item])).values());
-    if (combined.length === 0) return;
+    // De-duplicate and ensure we have words to work with
+    let uniqueCombined = Array.from(new Map(combined.map(item => [item.target, item])).values());
+    if (uniqueCombined.length === 0) return;
 
-    const shuffled = combined.sort(() => 0.5 - Math.random());
+    // Shuffle the entire unique list once
+    const shuffled = uniqueCombined.sort(() => 0.5 - Math.random());
+    
+    // MODIFIED: Implement the 5+5 quiz logic
     vocab_testBody.innerHTML = '';
-    shuffled.forEach((item, i) => {
+
+    // Take the first 5 (or fewer) for Target -> English questions
+    const targetFirstQuestions = shuffled.slice(0, 5);
+    targetFirstQuestions.forEach((item, i) => {
         const row = vocab_testBody.insertRow();
         row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
     });
+
+    // Take the next 5 (or fewer, if the list is short) for English -> Target questions
+    const englishFirstQuestions = shuffled.slice(5, 10);
+    englishFirstQuestions.forEach((item, i) => {
+        const row = vocab_testBody.insertRow();
+        const rowNumber = targetFirstQuestions.length + i + 1; // Continue numbering
+        // Swap the columns for the question format
+        row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span>${item.target}</span></td><td>${item.english}</td>`;
+    });
+    
     vocab_testContainer.classList.remove('hide');
     vocab_testControls.classList.remove('hide');
     vocab_printArea.classList.add('hide');
+    // Ensure answers start hidden
+    document.querySelectorAll('#vocab-test-container .answer-cell span').forEach(s => s.classList.remove('visible'));
 }
 
 function vocab_revealAnswers() {
