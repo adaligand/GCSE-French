@@ -50,8 +50,8 @@
             <button id="save-to-file-btn" class="save-btn">💾 Save Allocation to File</button>
             <label for="load-from-file-input" class="action-btn" style="margin-left: 10px; display: inline-block; padding: 12px 20px;">📂 Load Allocation from File</label>
             <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
-            <span id="save-confirm-msg" class="save-confirm">Progress Saved!</span>
-            <button id="clear-storage-btn" class="clear-btn" style="margin-left: auto;">Clear All Data & Reset</button>
+            <span id="save-confirm-msg" class="save-confirm">Progress Saved to File!</span>
+            <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset Page</button>
         </div>
 
         <div class="initial-setup-grid" id="initial-setup-wrapper">
@@ -101,7 +101,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const THEMES = { 1: "Personal world", 2: "Lifestyle", 3: "Neighbourhood", 4: "Media & Tech", 5: "Study & future", 6: "Travel and Tourism" };
-    const STORAGE_KEY = 'gcseAllocatorState';
 
     // DOM Elements
     const lockConfigBtn = document.getElementById('lock-config-btn');
@@ -109,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const createTableBtn = document.getElementById('create-table-btn');
     const editStudentListBtn = document.getElementById('edit-student-list-btn');
     const autoAllocateBtn = document.getElementById('auto-allocate-btn');
-    const clearStorageBtn = document.getElementById('clear-storage-btn');
+    const clearDataBtn = document.getElementById('clear-data-btn');
     const exportExcelBtn = document.getElementById('export-excel-btn'); 
     const saveToFileBtn = document.getElementById('save-to-file-btn'); 
     const loadFromFileInput = document.getElementById('load-from-file-input'); 
@@ -128,8 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('')}</select></div>`).join('');
     }
     
-    // --- SAVE, LOAD, EXPORT LOGIC ---
-    function saveState() {
+    // --- STATE MANAGEMENT AND EXPORT ---
+
+    // Builds a state object from the current page content
+    function buildStateObject() {
         const state = { rpConfig: {}, students: [], rpLocked: lockConfigBtn.disabled, studentsImported: !!allocationTableBody.innerHTML };
         for (let i = 1; i <= 6; i++) state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
         
@@ -142,17 +143,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
-        
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        const confirmMsg = document.getElementById('save-confirm-msg');
-        confirmMsg.style.display = 'inline';
-        setTimeout(() => { confirmMsg.style.display = 'none'; }, 2000);
+        return state;
     }
 
-    function loadState() {
-        const savedState = localStorage.getItem(STORAGE_KEY);
-        if (!savedState) return;
-        const state = JSON.parse(savedState);
+    // Populates the page from a given state object
+    function populatePageFromState(state) {
+        if (!state) return;
+
+        // Reset UI to default
+        allocationTableBody.innerHTML = '';
+        document.getElementById('student-names-input').value = '';
+        allocationSection.style.display = 'none';
+        initialSetupWrapper.style.display = 'grid';
 
         if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
             for (let i = 1; i <= 6; i++) document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
@@ -161,50 +163,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.students && state.students.length > 0) {
             document.getElementById('student-names-input').value = state.students.map(s => s.name).join('\n');
-            createTableBtn.click();
+            createTableBtn.click(); // This will create the table structure
+            // Now populate the created table with the detailed state
             allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
                 const s = state.students[index];
-                row.querySelector('.theme-choice-1').value = s.choice1;
-                row.querySelector('.theme-choice-2').value = s.choice2;
-                updateSelectedThemeForRow(row);
-                row.querySelector('.selected-theme').value = s.selected;
-                row.querySelector('.ra-result').innerHTML = s.ra;
-                row.querySelector('.rp-result').innerHTML = s.rp;
-                row.querySelector('.photo-result').innerHTML = s.pt;
+                if (s) {
+                    row.querySelector('.theme-choice-1').value = s.choice1;
+                    row.querySelector('.theme-choice-2').value = s.choice2;
+                    updateSelectedThemeForRow(row);
+                    row.querySelector('.selected-theme').value = s.selected;
+                    row.querySelector('.ra-result').innerHTML = s.ra;
+                    row.querySelector('.rp-result').innerHTML = s.rp;
+                    row.querySelector('.photo-result').innerHTML = s.pt;
+                }
             });
         }
     }
 
-    // REMOVED: The exportToCSV function is no longer needed.
-    
     function exportToExcel() {
         const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
         const table = document.getElementById('allocation-table');
-        
-        // Create a deep clone of the table to modify for export
         const tableClone = table.cloneNode(true);
 
-        // Process the cloned table
         tableClone.querySelectorAll('.result span').forEach(span => {
             const parentCell = span.parentElement;
             for (const className in themeColors) {
                 if (span.classList.contains(className)) {
                     parentCell.style.backgroundColor = themeColors[className];
                     parentCell.style.fontWeight = 'bold';
-                    parentCell.textContent = span.textContent; // Replace span with text
+                    parentCell.textContent = span.textContent;
                     break;
                 }
             }
         });
         
-        // MODIFIED/FIXED: Use the select's value to get the theme name, which is more reliable.
         tableClone.querySelectorAll('select').forEach(select => {
             const parentCell = select.parentElement;
             const selectedValue = select.value;
             if (selectedValue && THEMES[selectedValue]) {
-                parentCell.textContent = THEMES[selectedValue]; // e.g., "Neighbourhood"
+                parentCell.textContent = THEMES[selectedValue];
             } else {
-                // For placeholders like 'Select...' or '-'
                 parentCell.textContent = select.options[select.selectedIndex]?.text.split(': ')[1] || select.options[select.selectedIndex]?.text || '';
             }
         });
@@ -213,9 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
              cell.textContent = cell.textContent;
         });
 
-        // Generate the final HTML string for the file
         let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid #777;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
-
         const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tableHTML)));
         const link = document.createElement("a");
         link.href = dataUri;
@@ -226,12 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveAllocationToFile() {
-        saveState(); 
-        const stateString = localStorage.getItem(STORAGE_KEY);
-        if (!stateString) {
-            alert("No data to save.");
-            return;
-        }
+        const state = buildStateObject();
+        const stateString = JSON.stringify(state, null, 2); // Pretty print JSON
         const blob = new Blob([stateString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -240,6 +232,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        const confirmMsg = document.getElementById('save-confirm-msg');
+        confirmMsg.style.display = 'inline';
+        setTimeout(() => { confirmMsg.style.display = 'none'; }, 2000);
     }
 
     function loadAllocationFromFile(event) {
@@ -249,19 +245,16 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = function(e) {
             const content = e.target.result;
             try {
-                const parsed = JSON.parse(content);
-                if (parsed.rpConfig) {
-                     if (confirm("This will overwrite your current progress. Are you sure you want to load this file?")) {
-                        localStorage.setItem(STORAGE_KEY, content);
-                        window.location.reload();
-                     }
+                const state = JSON.parse(content);
+                if (state.rpConfig) {
+                    populatePageFromState(state);
                 } else {
                     throw new Error("Invalid file format.");
                 }
             } catch (error) {
                 alert("Error: Could not load the file. It might be corrupted or not a valid allocation file.");
             }
-            event.target.value = '';
+            event.target.value = ''; // Clear input to allow loading same file again
         };
         reader.readAsText(file);
     }
@@ -388,16 +381,15 @@ document.addEventListener('DOMContentLoaded', () => {
     saveToFileBtn.addEventListener('click', saveAllocationToFile);
     loadFromFileInput.addEventListener('change', loadAllocationFromFile);
 
-    clearStorageBtn.addEventListener('click', () => {
-        if (confirm("Are you sure? This will clear all saved data and reset the page.")) {
-            localStorage.removeItem(STORAGE_KEY);
+    clearDataBtn.addEventListener('click', () => {
+        if (confirm("Are you sure? This will clear the page.")) {
             window.location.reload();
         }
     });
 
     // Initial page load
     initializeRpConfig();
-    loadState();
+    // REMOVED: The loadState() function is no longer called automatically on page load.
 });
 </script>
 
