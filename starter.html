@@ -158,35 +158,47 @@
     .answer-cell span.visible { visibility: visible; }
 
     /* --- PRINT --- */
-  @media print {
-    body * { visibility: hidden; } /* Hide everything else */
+@media print {
+    body * { visibility: hidden; }
     #vocab-print-area, #vocab-print-area * { visibility: visible; }
 
+    /* Flex container to hold two tables side by side */
     #vocab-print-area {
         display: flex;
-        gap: 20px;
+        flex-direction: row;
+        justify-content: space-between;
         width: 100%;
         padding: 0;
         margin: 0;
+        box-sizing: border-box;
+        page-break-inside: avoid; /* Keep on same page */
     }
 
     #vocab-print-area > div {
-        flex: 1; /* Each copy takes half page */
+        flex: 1;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        page-break-inside: avoid; /* Prevent table from breaking across pages */
     }
 
+    /* Tables fill the column width */
     #vocab-print-area table {
         width: 100%;
         border-collapse: collapse;
         font-size: 11pt;
+        page-break-inside: avoid;
     }
 
     #vocab-print-area th, #vocab-print-area td {
         border: 1px solid #000;
         padding: 5px 8px;
+        line-height: 1.2;
     }
 
     .answer-cell span { visibility: hidden !important; }
 }
+
 
   </style>
 </head>
@@ -610,9 +622,10 @@ function vocab_revealAnswers() {
 }
 
 function vocab_generatePrintVersion() {
-    // Clone the table into two copies side by side
+    // Use the existing table HTML
     const tableHtml = vocab_testContainer.innerHTML;
 
+    // Insert two copies side by side in the print area
     vocab_printArea.innerHTML = `
         <div>${tableHtml}</div>
         <div>${tableHtml}</div>
@@ -625,10 +638,11 @@ function vocab_generatePrintVersion() {
     window.print();
     document.title = "Language Practice Hub";
 
-    // Restore visibility after printing
+    // Restore after printing
     vocab_printArea.classList.add('hide'); 
     vocab_testContainer.classList.remove('hide');
 }
+
 
 // --- Start the App ---
 initializeApp();
