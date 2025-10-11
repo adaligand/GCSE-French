@@ -333,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
                 selectedThemeDropdown.value = saved.selected;
-                // MODIFIED/FIXED: Explicitly call the color-coding function after restoring data
                 colorCodeSelectedTheme(selectedThemeDropdown);
                 row.querySelector('.ra-result').innerHTML = saved.ra; 
                 row.querySelector('.rp-result').innerHTML = saved.rp; 
@@ -346,9 +345,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addTableEventListeners();
     });
 
+    // MODIFIED/FIXED: Removed the destructive card-clearing logic.
     editConfigBtn.addEventListener('click', () => {
-        if (allocationTableBody.querySelector('.ra-result span') && !confirm("Warning: Changing RP themes will clear all existing card allocations. Continue?")) return;
-        if (allocationTableBody.querySelector('.ra-result span')) allocationTableBody.querySelectorAll('.photo-result, .ra-result, .rp-result').forEach(cell => cell.innerHTML = '');
         document.querySelectorAll('#rp-config-grid select').forEach(s => s.disabled = false);
         lockConfigBtn.disabled = false;
         allocationSection.style.display = 'none';
@@ -409,7 +407,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
     }
 
+    // MODIFIED/FIXED: Added confirmation prompt before overwriting allocations.
     autoAllocateBtn.addEventListener('click', () => {
+        if (allocationTableBody.querySelector('.ra-result span')) {
+            if (!confirm("This will overwrite existing card allocations. Are you sure you want to continue?")) {
+                return;
+            }
+        }
+
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
         allocationError.style.display = 'none';
 
