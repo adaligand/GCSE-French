@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Speaking Exam Allocator</title>
+    <title>GCSE Speaking Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -14,7 +14,8 @@
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        button, .action-btn-label { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; box-sizing: border-box; }
+        /* MODIFIED: Added display and vertical-align for consistent height */
+        button, .action-btn-label { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; box-sizing: border-box; display: inline-block; vertical-align: middle; }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
         .action-btn { background-color: #28a745; }
         .action-btn:hover { background-color: #218838; }
@@ -45,7 +46,7 @@
 <body>
 
     <div class="container">
-        <h1>GCSE Speaking Exam Allocator 📋</h1>
+        <h1>GCSE Speaking Card Allocator 📋</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -135,8 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allocationTableBody.innerHTML) {
             allocationTableBody.querySelectorAll('tr').forEach(row => {
                 state.students.push({
-                    examNumber: row.cells[0].textContent, // ADDED
-                    name: row.cells[1].textContent, // Index shifted
+                    examNumber: row.cells[0].textContent,
+                    name: row.cells[1].textContent,
                     choice1: row.querySelector('.theme-choice-1').value, 
                     choice2: row.querySelector('.theme-choice-2').value,
                     selected: row.querySelector('.selected-theme').value, 
@@ -163,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (state.students && state.students.length > 0) {
-            // MODIFIED: Rebuild textarea with both columns
             document.getElementById('student-names-input').value = state.students.map(s => `${s.examNumber}\t${s.name}`).join('\n');
             createTableBtn.click();
             allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     row.querySelector('.theme-choice-2').value = s.choice2;
                     updateSelectedThemeForRow(row);
                     selectedThemeDropdown.value = s.selected;
-                    colorCodeSelectedTheme(selectedThemeDropdown); // Apply color on load
+                    colorCodeSelectedTheme(selectedThemeDropdown);
                     row.querySelector('.ra-result').innerHTML = s.ra;
                     row.querySelector('.rp-result').innerHTML = s.rp;
                     row.querySelector('.photo-result').innerHTML = s.pt;
@@ -192,14 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const parentCell = el.parentElement;
             let themeClass = '';
 
-            // Find the theme color class if it exists
             for(const c of parentCell.classList) {
                 if (c.startsWith('theme-color-')) {
                     themeClass = c;
                     break;
                 }
             }
-             if (el.classList.contains('result')) { // For allocated cards
+             if (el.classList.contains('result')) {
                 for(const c of el.firstChild?.classList || []) {
                      if (c.startsWith('theme-color-')) {
                         themeClass = c;
@@ -286,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     createTableBtn.addEventListener('click', () => {
         const oldData = {};
         allocationTableBody.querySelectorAll('tr').forEach(row => {
-            const name = row.cells[1].textContent.trim(); // Index shifted
+            const name = row.cells[1].textContent.trim();
             if (name) oldData[name] = { 
                 examNumber: row.cells[0].textContent.trim(),
                 choice1: row.querySelector('.theme-choice-1').value, 
@@ -298,12 +297,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        // MODIFIED: Handle two-column paste
         const lines = document.getElementById('student-names-input').value.trim().split('\n');
         const studentData = lines.map(line => {
-            const parts = line.split('\t'); // Split by tab
+            const parts = line.split('\t');
             return { examNumber: (parts[0] || '').trim(), name: (parts[1] || '').trim() };
-        }).filter(s => s.name); // Filter out empty lines
+        }).filter(s => s.name);
 
         if (studentData.length === 0) return;
 
@@ -324,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ).join('');
         
         allocationTableBody.querySelectorAll('tr').forEach(row => {
-            const name = row.cells[1].textContent.trim(); // Index shifted
+            const name = row.cells[1].textContent.trim();
             const saved = oldData[name];
             if (saved) {
                 row.cells[0].textContent = saved.examNumber;
@@ -353,7 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     editStudentListBtn.addEventListener('click', () => {
-        // MODIFIED: Rebuild textarea with both columns
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
             const name = row.cells[1].textContent.trim();
@@ -365,10 +362,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initialSetupWrapper.style.display = 'grid';
     });
 
-    // ADDED: New function to color the selected theme cell
     function colorCodeSelectedTheme(selectElement) {
         const cell = selectElement.parentElement;
-        // Remove any existing theme color classes
         for (let i = 1; i <= 6; i++) {
             cell.classList.remove(`theme-color-${i}`);
         }
@@ -382,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const choice1 = row.querySelector('.theme-choice-1'), choice2 = row.querySelector('.theme-choice-2'), selected = row.querySelector('.selected-theme');
         const val1 = choice1.value, val2 = choice2.value;
         selected.disabled = true; selected.innerHTML = '<option value="">-</option>';
-        colorCodeSelectedTheme(selected); // Reset color
+        colorCodeSelectedTheme(selected);
         if (val1 && val2 && val1 !== val2) {
             selected.innerHTML = `<option value="">Select...</option><option value="${val1}">${val1}: ${THEMES[val1]}</option><option value="${val2}">${val2}: ${THEMES[val2]}</option>`;
             selected.disabled = false;
@@ -393,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
         allocationTableBody.querySelectorAll('tr').forEach(row => {
             row.querySelector('.theme-choice-1').addEventListener('change', () => updateSelectedThemeForRow(row));
             row.querySelector('.theme-choice-2').addEventListener('change', () => updateSelectedThemeForRow(row));
-            // MODIFIED: Added event listener for selected theme dropdown
             row.querySelector('.selected-theme').addEventListener('change', (e) => colorCodeSelectedTheme(e.target));
         });
     }
