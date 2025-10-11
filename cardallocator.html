@@ -14,8 +14,8 @@
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        button { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
-        button:hover { background-color: #0056b3; }
+        button, .action-btn-label { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover, .action-btn-label:hover { background-color: #0056b3; }
         .action-btn { background-color: #28a745; }
         .action-btn:hover { background-color: #218838; }
         .edit-btn { background-color: #ffc107; color: #212529; }
@@ -79,7 +79,13 @@
             </div>
              <div class="controls">
                 <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE ALL CARDS</button>
+                 <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
                 <button id="export-csv-btn" class="export-btn">📄 Export Table to CSV</button>
+             </div>
+             <div class="controls" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                 <button id="save-to-file-btn" class="save-btn">💾 Save Allocation to File</button>
+                 <label for="load-from-file-input" class="action-btn" style="margin-left: 10px; display: inline-block; padding: 12px 20px;">📂 Load Allocation from File</label>
+                 <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
              </div>
             <div class="alert" id="allocation-error"></div>
             <div style="overflow-x:auto;">
@@ -110,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveProgressBtn = document.getElementById('save-progress-btn');
     const clearStorageBtn = document.getElementById('clear-storage-btn');
     const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportExcelBtn = document.getElementById('export-excel-btn'); // ADDED
+    const saveToFileBtn = document.getElementById('save-to-file-btn'); // ADDED
+    const loadFromFileInput = document.getElementById('load-from-file-input'); // ADDED
     
     const initialSetupWrapper = document.getElementById('initial-setup-wrapper');
     const allocationSection = document.getElementById('allocation-section');
@@ -181,6 +190,93 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
     
+    // ADDED FUNCTION - Export to a format Excel can open with styles
+    function exportToExcel() {
+        const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
+        const table = document.getElementById('allocation-table');
+        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid #777;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${table.innerHTML}</table></body></html>`;
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = tableHTML;
+
+        // Apply inline styles for colors
+        tempDiv.querySelectorAll('.result span').forEach(span => {
+            const parentCell = span.parentElement;
+            for (const className in themeColors) {
+                if (span.classList.contains(className)) {
+                    parentCell.style.backgroundColor = themeColors[className];
+                    parentCell.style.fontWeight = 'bold';
+                    parentCell.textContent = span.textContent; // Replace span with its text content in the cell
+                    break;
+                }
+            }
+        });
+        
+        // Remove dropdowns and put their selected text in the cell for a clean export
+        tempDiv.querySelectorAll('select').forEach(select => {
+            const parentCell = select.parentElement;
+            const selectedText = select.options[select.selectedIndex]?.text || '';
+            parentCell.textContent = selectedText.split(': ')[1] || selectedText; // Get theme name if available
+        });
+
+        // Ensure student name cell is plain text
+        tempDiv.querySelectorAll('.student-name').forEach(cell => {
+             cell.textContent = cell.textContent; // This strips any potential inner HTML
+        });
+
+        const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tempDiv.innerHTML)));
+        const link = document.createElement("a");
+        link.href = dataUri;
+        link.download = "speaking_exam_allocations.xls";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // ADDED FUNCTION - Save current state (from localStorage) to a .json file
+    function saveAllocationToFile() {
+        // First, ensure the latest state is in localStorage
+        saveState();
+        const stateString = localStorage.getItem(STORAGE_KEY);
+        if (!stateString) {
+            alert("No data to save.");
+            return;
+        }
+        const blob = new Blob([stateString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `gcse_allocation_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // ADDED FUNCTION - Load state from a .json file and reload the page
+    function loadAllocationFromFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            try {
+                const parsed = JSON.parse(content);
+                if (parsed.rpConfig && parsed.students) {
+                     if (confirm("This will overwrite your current progress. Are you sure you want to load this file?")) {
+                        localStorage.setItem(STORAGE_KEY, content);
+                        window.location.reload();
+                     }
+                } else {
+                    throw new Error("Invalid file format.");
+                }
+            } catch (error) {
+                alert("Error: Could not load the file. It might be corrupted or not a valid allocation file.");
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
     // --- CORE APPLICATION LOGIC ---
     let rpThemeMap = {};
     
@@ -198,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const names = document.getElementById('student-names-input').value.trim().split('\n').filter(name => name.trim() !== '');
         if (names.length === 0) return;
-        if (!lockConfigBtn.disabled) lockConfigBtn.click(); // Auto-lock RP themes if not already locked
+        if (!lockConfigBtn.disabled) lockConfigBtn.click();
         const themeOptions = Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('');
         allocationTableBody.innerHTML = names.map(name => `<tr><td class="student-name" contenteditable="true">${name.trim()}</td><td><select class="theme-choice-1">${themeOptions}</select></td><td><select class="theme-choice-2">${themeOptions}</select></td><td><select class="selected-theme" disabled><option value="">-</option></select></td><td class="result ra-result"></td><td class="result rp-result"></td><td class="result photo-result"></td></tr>`).join('');
         
@@ -300,6 +396,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveProgressBtn.addEventListener('click', saveState);
     exportCsvBtn.addEventListener('click', exportToCSV);
+    exportExcelBtn.addEventListener('click', exportToExcel); // ADDED
+    saveToFileBtn.addEventListener('click', saveAllocationToFile); // ADDED
+    loadFromFileInput.addEventListener('change', loadAllocationFromFile); // ADDED
+
     clearStorageBtn.addEventListener('click', () => {
         if (confirm("Are you sure? This will clear all saved data and reset the page.")) {
             localStorage.removeItem(STORAGE_KEY);
