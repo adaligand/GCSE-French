@@ -1,1017 +1,364 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Language Practice Hub</title>
-  <!-- Load Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f0f2f5;
-      color: #1c1e21;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-    }
-    .container {
-      width: 100%;
-      max-width: 1400px;
-      background: #fff;
-      padding: 25px 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    h1, h2 { text-align: center; color: #333; }
-    .hide { display: none !important; }
+import React, { useState, useEffect, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, onSnapshot, collection, query } from 'firebase/firestore';
+import { Check, RotateCw, ChevronDown, List, Loader2 } from 'lucide-react';
 
-    /* --- CONFIG/DEBUG SECTION --- */
-    #config-panel {
-        margin-bottom: 25px;
-        padding: 15px;
-        border: 1px solid #ffcc00; /* Amber border for warning/config */
-        border-radius: 8px;
-        background-color: #fff9e6; /* Light yellow background */
-        text-align: left;
-    }
-    #config-panel h2 {
-        text-align: left;
-        margin-top: 0;
-        color: #b37400; /* Darker amber title */
-        font-size: 1.2em;
-        font-weight: bold;
-    }
-    .status-item {
-        margin-top: 10px;
-        padding: 8px;
-        border-radius: 4px;
-        font-size: 0.9em;
-        word-break: break-all;
-        border-left: 5px solid;
-    }
-    .status-loading { border-color: #3498db; background-color: #eaf6ff; color: #2980b9; }
-    .status-success { border-color: #27ae60; background-color: #e8f5e9; color: #27ae60; }
-    .status-error { border-color: #c0392b; background-color: #fde8e8; color: #c0392b; font-weight: bold; }
-    .config-url-display {
-        font-size: 0.9em;
-        word-break: break-all;
-        color: #606770;
-    }
+// --- Firebase and Environment Setup ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    /* --- MENU --- */
-    #main-menu { text-align: center; }
-    #main-menu .menu-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 30px;
-      flex-wrap: wrap;
-    }
-    .menu-button {
-      font-size: 1.2em;
-      padding: 20px 40px;
-      border-radius: 10px;
-      border: none;
-      color: white;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .menu-button:hover:not(:disabled) {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-    }
-    .menu-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    #reading-btn { background-color: #2980b9; }
-    #listening-btn { background-color: #27ae60; }
-    #vocab-btn { background-color: #8e44ad; }
-    #sentence-btn { background-color: #e67e22; } 
+// Helper to handle base64 to ArrayBuffer for audio (not used now, but useful if adding TTS)
+// function base64ToArrayBuffer(base64) {
+//     const binaryString = atob(base64);
+//     const len = binaryString.length;
+//     const bytes = new Uint8Array(len);
+//     for (let i = 0; i < len; i++) {
+//         bytes[i] = binaryString.charCodeAt(i);
+//     }
+//     return bytes.buffer;
+// }
 
-    /* --- BUTTON STYLE --- */
-    button {
-      border: none;
-      border-radius: 8px;
-      font-size: 1em;
-      font-weight: 600;
-      cursor: pointer;
-      padding: 12px 20px;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-      white-space: nowrap;
-    }
-    button:hover:not(:disabled) { transform: translateY(-2px); }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-primary { background-color: #2980b9; color: #fff; }
-    .btn-primary:hover:not(:disabled) { background-color: #3498db; }
-    .btn-secondary {
-      background-color: #6c757d;
-      color: white;
-    }
-    .btn-secondary:hover:not(:disabled) {
-      background-color: #5a6268;
-    }
+// --- Utility Components ---
 
-    /* --- PRACTICE --- */
-    .practice-controls {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 25px;
-      align-items: flex-end;
-      flex-wrap: wrap; 
-    }
-    .practice-control-group {
-      flex-grow: 1;
-      min-width: 200px; 
-      display: flex;
-      flex-direction: column;
-    }
-    label { font-weight: 600; margin-bottom: 8px; color: #606770; }
-    select {
-      font-size: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #dddfe2;
-      background-color: #f5f6f7;
-    }
-    #question-display {
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      padding: 20px;
-      min-height: 400px;
-      background-color: #fafafa;
-    }
-    #question-display iframe {
-      width: 100%;
-      height: 500px;
-      border-radius: 8px;
-      border: none;
-    }
+/** A visually styled primary button. Styles restored to be prominent and rounded. */
+const PrimaryButton = ({ children, onClick, disabled, className = '' }) => (
+    <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`
+            px-6 py-3 font-semibold text-white transition-all duration-200 rounded-xl shadow-lg
+            transform hover:scale-[1.02] active:scale-[0.98]
+            ${disabled
+                ? 'bg-gray-400 cursor-not-allowed shadow-none'
+                : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/50'
+            }
+            ${className}
+        `}
+    >
+        {children}
+    </button>
+);
 
-    /* --- VOCAB & SENTENCE LAYOUT --- */
-    .vocab-main-wrapper { display: flex; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
-    .vocab-test-panel { flex-grow: 1; min-width: 300px; }
-    .vocab-controls-panel {
-      flex: 0 0 300px;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    
-    .vocab-control-group {
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    
-    /* --- VOCAB TABLE STYLES --- */
-    #vocab-test-container table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 1.4em;
-      table-layout: fixed; 
-    }
-    #vocab-test-container th, #vocab-test-container td {
-      border: 1px solid #ddd;
-      padding: 12px;
-      text-align: left;
-    }
-    /* Column 1: Number (Fixed width) */
-    #vocab-test-container th:first-child,
-    #vocab-test-container td.num-cell {
-      width: 60px;
-      text-align: center;
-    }
-    /* Column 2 & 3: Target and English (Equal width) */
-    #vocab-test-container th:nth-child(2),
-    #vocab-test-container td:nth-child(2),
-    #vocab-test-container th:nth-child(3),
-    #vocab-test-container td:nth-child(3) {
-      width: 47%; 
-    }
-
-    .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
-    .answer-cell span.visible { visibility: visible; }
-    
-    /* --- SENTENCE SPECIFIC --- */
-    #sentence-activity-display h3 {
-        text-align: left;
-        color: #e67e22;
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-weight: bold;
-    }
-    #sentence-answer-display {
-        border-radius: 8px;
-        background-color: #ecf0f1;
-        border: 1px solid #bdc3c7;
-        padding: 15px;
-        color: #333;
-        font-size: 1.1em;
-    }
-
-    /* --- PRINT --- */
-    @media print {
-        @page { size: A4 landscape; margin: 1cm; }
-        
-        /* Hide all user interface elements */
-        .container > :not(#vocab-section) { display: none !important; }
-        
-        /* Show only the vocab section for printing */
-        #vocab-section { 
-            display: block !important; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            padding: 0; 
-            margin: 0;
-        }
-        .vocab-main-wrapper { display: block; }
-        .vocab-controls-panel { display: none !important; }
-
-        /* --- Quiz Grid Styling --- */
-        #vocab-test-container {
-            display: block !important; 
-            width: 100%;
-            column-count: 2;
-            column-gap: 20px;
-        }
-
-        /* Apply table styling for print */
-        #vocab-test-container table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11pt; 
-            page-break-inside: avoid; 
-            margin-bottom: 20px;
-            table-layout: fixed;
-        }
-        
-        #vocab-test-container th, #vocab-test-container td { 
-            border: 1px solid #000; 
-            padding: 5px 8px; 
-            line-height: 1.2; 
-        }
-
-        /* Ensure column widths are maintained in print */
-        #vocab-test-container th:first-child,
-        #vocab-test-container td.num-cell {
-            width: 50px; 
-        }
-        #vocab-test-container th:nth-child(2),
-        #vocab-test-container td:nth-child(2),
-        #vocab-test-container th:nth-child(3),
-        #vocab-test-container td:nth-child(3) {
-            width: calc(50% - 25px); 
-        }
-        
-        /* Ensure answers are hidden for the blank quiz printout */
-        .answer-cell span { 
-            visibility: hidden !important; 
-        }
-    }
-  </style>
-</head>
-<body>
-<div class="container">
-  
-  <!-- CONFIGURATION/DEBUG PANEL -->
-  <div id="config-panel">
-    <h2>Data Connection Status</h2>
-    <p class="config-url-display">The application is attempting to load data from the three published CSV links below. Activity buttons will be enabled when all required data is loaded.</p>
-    <div id="status-display">
-      <div id="status-reading" class="status-item status-loading">Loading **Listening & Reading** data...</div>
-      <div id="status-vocab" class="status-item status-loading">Loading **Vocabulary** data...</div>
-      <div id="status-sentence" class="status-item status-loading">Loading **Sentence** data...</div>
+/** A visually styled text input/select container. */
+const InputContainer = ({ children, className = '' }) => (
+    <div className={`relative w-full ${className}`}>
+        <div className="flex items-center w-full px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-inner focus-within:ring-2 focus-within:ring-indigo-500 transition-all duration-150">
+            {children}
+        </div>
     </div>
-  </div>
-  
-  <div id="main-menu">
-    <h1>Language Practice Hub</h1>
-    <p>Please choose an activity</p>
-    <div class="menu-buttons">
-      <button id="reading-btn" class="menu-button" disabled>Reading Practice</button>
-      <button id="listening-btn" class="menu-button" disabled>Listening Practice</button>
-      <button id="vocab-btn" class="menu-button" disabled>Vocabulary Test</button>
-      <button id="sentence-btn" class="menu-button" disabled>Sentence Practice</button>
+);
+
+/** Custom styled dropdown component (Topic Selector). Styles restored. */
+const CustomSelect = ({ value, onChange, options, label }) => (
+    <div className="relative w-full">
+        <label htmlFor="topic-select" className="block mb-1 text-sm font-medium text-gray-700">{label}</label>
+        <div className="relative">
+            <select
+                id="topic-select"
+                value={value}
+                onChange={onChange}
+                className="block w-full appearance-none bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-10 text-gray-800 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow duration-150 cursor-pointer font-medium"
+            >
+                {options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+            </div>
+        </div>
     </div>
-  </div>
-
-  <div id="practice-section" class="hide">
-    <h1 id="practice-title">Practice Section</h1>
-    <input type="hidden" id="current-practice-type" value="">
-    <div class="practice-controls">
-      <div class="practice-control-group">
-        <label for="topic-select">Choose a Theme:</label>
-        <select id="topic-select"><option>Loading Themes...</option></select>
-      </div>
-      <!-- QUESTION SELECTOR -->
-      <div class="practice-control-group">
-        <label for="question-select">Choose a Question:</label>
-        <select id="question-select"><option>Select a Theme first...</option></select>
-      </div>
-      <!-- END QUESTION SELECTOR -->
-      <button id="generate-practice-btn" class="btn-primary">Load Question</button>
-      <button id="fullscreen-btn" class="btn-primary hide">🔈 Open Full Screen</button>
-      <button class="btn-primary back-btn">Back to Main Menu</button>
-    </div>
-    <div id="question-display">
-      <h2>Your question will appear here</h2>
-      <p>Select a theme and question, then click "Load Question".</p>
-    </div>
-  </div>
-
-  <div id="vocab-section" class="hide">
-    <div class="vocab-main-wrapper">
-      <div class="vocab-test-panel">
-        <div id="vocab-test-container" class="hide">
-          <table>
-            <thead><tr><th>No.</th><th>Target Language</th><th>English</th></tr></thead>
-            <tbody id="vocab-test-body"></tbody>
-          </table>
-        </div>
-        <div id="vocab-print-area" class="hide"></div>
-      </div>
-      <div class="vocab-controls-panel" id="vocab-controls-panel">
-        <h1>Vocabulary Test</h1>
-        <div id="vocab-setup-controls" class="vocab-control-group">
-          <label for="vocab-theme-select">1. Choose Theme:</label><select id="vocab-theme-select"></select>
-          <label for="vocab-set-select">2. Choose Set:</label><select id="vocab-set-select"></select>
-          <label for="vocab-set-select-2">3. 2nd set (Optional):</label><select id="vocab-set-select-2"></select>
-          <button id="vocab-generate-btn" class="btn-primary">Generate List</button>
-        </div>
-        <div id="vocab-test-controls" class="vocab-control-group hide">
-          <button id="vocab-reveal-btn" class="btn-primary">Reveal Answers</button>
-          <button id="vocab-print-btn" class="btn-primary">🖨️ Print Test</button>
-        </div>
-        <button class="btn-primary back-btn">Back to Main Menu</button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- SENTENCE SECTION -->
-  <div id="sentence-section" class="hide">
-    <div class="vocab-main-wrapper">
-      <div class="vocab-test-panel">
-        <h1 style="text-align: left;">Sentence Practice</h1>
-        <div id="sentence-activity-display" style="min-height: 200px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background-color: #fff;">
-          <p>Generate a sentence activity using the controls on the right.</p>
-        </div>
-        <div id="sentence-answer-display" class="hide" style="margin-top: 15px;">
-          <div style="padding: 15px; background-color: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px;">
-            <strong>Answer:</strong> <span id="sentence-answer-text"></span>
-          </div>
-        </div>
-      </div>
-      <div class="vocab-controls-panel">
-        <div id="sentence-setup-controls" class="vocab-control-group">
-          <label for="sentence-theme-select">1. Choose Theme:</label><select id="sentence-theme-select"></select>
-          <label for="sentence-set-select">2. Choose Set:</label><select id="sentence-set-select"></select>
-          <label for="sentence-activity-select">3. Choose Activity:</label>
-          <select id="sentence-activity-select">
-            <option value="">-- Select Activity --</option>
-            <option value="break_flow">Break the Flow (No spaces)</option>
-            <option value="unjumble">Unjumble Words</option>
-            <option value="missing_vowel">Missing Vowels</option>
-            <option value="missing_consonant">Missing Consonants</option>
-            <option value="random_fr">Random Target Sentence (Answer EN)</option>
-            <option value="random_en">Random English Sentence (Answer FR)</option>
-          </select>
-          <button id="sentence-generate-btn" class="btn-primary">Generate Activity</button>
-        </div>
-        <div id="sentence-test-controls" class="vocab-control-group hide">
-          <button id="sentence-reveal-btn" class="btn-primary">Reveal Answer</button>
-        </div>
-        <button class="btn-primary back-btn">Back to Main Menu</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-// --- Configuration: Direct Public CSV Export URLs ---
-const READING_LISTENING_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvNFlHDx-4cZbDzwKy5Yb_DKeSxS2wSXxyX1Ua6pGcf27yFjmqOPz9jQ_rzoV3-zoZI9lw4EIfmdXH/pub?output=csv';
-const VOCAB_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv';
-const SENTENCE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeenmRJ1Gqolo-8KqU5A84PProbYHoY3SrXKFxFgdzwf_FdmJnpfbpEf9KmbhqhQk17K6USG_UOJg9/pub?output=csv';
-
-let practice_allQuestions = [];
-let vocab_vocabSets = {};
-let sentence_sentenceSets = {}; 
-
-// --- DOM Elements ---
-const mainMenu = document.getElementById('main-menu');
-const practiceSection = document.getElementById('practice-section');
-const vocabSection = document.getElementById('vocab-section');
-const sentenceSection = document.getElementById('sentence-section'); 
-const readingBtn = document.getElementById('reading-btn');
-const listeningBtn = document.getElementById('listening-btn');
-const vocabBtn = document.getElementById('vocab-btn');
-const sentenceBtn = document.getElementById('sentence-btn'); 
-const currentPracticeTypeInput = document.getElementById('current-practice-type');
-
-const practice_topicSelect = document.getElementById('topic-select'); 
-const practice_questionSelect = document.getElementById('question-select'); 
-const practice_generateBtn = document.getElementById('generate-practice-btn');
-const practice_questionDisplay = document.getElementById('question-display');
-const fullscreenBtn = document.getElementById('fullscreen-btn');
-
-const vocab_themeSelect = document.getElementById('vocab-theme-select');
-const vocab_setSelect = document.getElementById('vocab-set-select');
-const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
-const vocab_generateBtn = document.getElementById('vocab-generate-btn');
-const vocab_testContainer = document.getElementById('vocab-test-container');
-const vocab_testBody = document.getElementById('vocab-test-body');
-const vocab_testControls = document.getElementById('vocab-test-controls');
-const vocab_revealBtn = document.getElementById('vocab-reveal-btn');
-const vocab_printArea = document.getElementById('vocab-print-area');
-
-const sentence_themeSelect = document.getElementById('sentence-theme-select'); 
-const sentence_setSelect = document.getElementById('sentence-set-select'); 
-const sentence_activitySelect = document.getElementById('sentence-activity-select'); 
-const sentence_generateBtn = document.getElementById('sentence-generate-btn'); 
-const sentence_revealBtn = document.getElementById('sentence-reveal-btn'); 
-const sentence_activityDisplay = document.getElementById('sentence-activity-display'); 
-const sentence_answerDisplay = document.getElementById('sentence-answer-display'); 
-const sentence_answerText = document.getElementById('sentence-answer-text'); 
-const sentence_testControls = document.getElementById('sentence-test-controls'); 
-
-const statusReading = document.getElementById('status-reading');
-const statusVocab = document.getElementById('status-vocab');
-const statusSentence = document.getElementById('status-sentence');
-
-let currentSentenceData = { 
-    question: '',
-    answer: '',
-    activityType: ''
-};
-
-// --- Navigation ---
-readingBtn.addEventListener('click', () => showPractice('Reading'));
-listeningBtn.addEventListener('click', () => showPractice('Listening'));
-vocabBtn.addEventListener('click', showVocabTest);
-sentenceBtn.addEventListener('click', showSentencePractice); 
-document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
-
-function showMainMenu() {
-    [practiceSection, vocabSection, sentenceSection].forEach(el => el.classList.add('hide'));
-    mainMenu.classList.remove('hide'); 
-}
-
-function showPractice(type) {
-    mainMenu.classList.add('hide');
-    practiceSection.classList.remove('hide');
-    [vocabSection, sentenceSection].forEach(el => el.classList.add('hide'));
-    document.getElementById('practice-title').textContent = `${type} Practice`;
-    currentPracticeTypeInput.value = type;
-    practice_populateTopics();
-}
-
-function showVocabTest() {
-    mainMenu.classList.add('hide');
-    vocabSection.classList.remove('hide');
-    [practiceSection, sentenceSection].forEach(el => el.classList.add('hide'));
-    vocab_initializeSelectors();
-}
-
-function showSentencePractice() {
-    mainMenu.classList.add('hide');
-    sentenceSection.classList.remove('hide'); 
-    [practiceSection, vocabSection].forEach(el => el.classList.add('hide'));
-    
-    // Reset display
-    sentence_activityDisplay.innerHTML = '<p>Generate a sentence activity using the controls on the right.</p>';
-    sentence_answerDisplay.classList.add('hide');
-    sentence_testControls.classList.add('hide');
-
-    sentence_initializeSelectors();
-}
+);
 
 
-// --- Data Loading with Retry and Diagnostics ---
-async function loadDataWithRetry(url, options, sheetName, statusElement, maxRetries = 3) {
-    for (let i = 0; i < maxRetries; i++) {
+// --- Main Application Component ---
+const App = () => {
+    const [db, setDb] = useState(null);
+    const [auth, setAuth] = useState(null);
+    const [userId, setUserId] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+
+    // State for the actual application data
+    const [sentences, setSentences] = useState([]);
+    const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+    const [isCorrect, setIsCorrect] = useState(null);
+    const [typedText, setTypedText] = useState('');
+    const [topics, setTopics] = useState([]);
+    const [selectedTopic, setSelectedTopic] = useState('all');
+    const [isLoadingData, setIsLoadingData] = useState(true);
+
+    const currentSentence = useMemo(() => {
+        if (sentences.length === 0) return null;
+        return sentences[currentSentenceIndex];
+    }, [sentences, currentSentenceIndex]);
+
+    // 1. Firebase Initialization and Authentication
+    useEffect(() => {
         try {
-            statusElement.textContent = `Loading **${sheetName}** data... (Attempt ${i + 1})`;
-            statusElement.className = 'status-item status-loading';
-            
-            const data = await new Promise((resolve, reject) => {
-                Papa.parse(url, {
-                    ...options,
-                    download: true,
-                    skipEmptyLines: true,
-                    complete: (results) => {
-                        // Check for common GS export errors (like "Not Found" being the only cell)
-                        if (results.data.length === 1 && results.data[0].length === 1 && 
-                            results.data[0][0].includes('Not Found')) {
-                            reject(new Error(`Sheet returned 'Not Found'. Ensure the public link is correct.`));
-                            return;
+            const app = initializeApp(firebaseConfig);
+            const authInstance = getAuth(app);
+            const dbInstance = getFirestore(app);
+
+            // Log initialization status
+            console.log('Firebase initialized. App ID:', appId);
+            // setLogLevel('Debug'); // Uncomment for detailed Firestore logs
+
+            setDb(dbInstance);
+            setAuth(authInstance);
+
+            const unsubscribe = onAuthStateChanged(authInstance, (user) => {
+                if (user) {
+                    setUserId(user.uid);
+                    console.log('User signed in. UID:', user.uid);
+                } else {
+                    console.log('No user found. Attempting sign-in.');
+                    const signIn = async () => {
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(authInstance, initialAuthToken);
+                            } else {
+                                await signInAnonymously(authInstance);
+                            }
+                        } catch (error) {
+                            console.error('Firebase Auth Error:', error);
+                            // Fallback to a random ID if sign-in fails, though data won't persist/sync well.
+                            setUserId(crypto.randomUUID());
                         }
-                        if (results.data.length < 2 && options.header) {
-                            reject(new Error(`Data too short. Check if the spreadsheet is empty or incorrectly published.`));
-                            return;
-                        }
-                        resolve(results.data);
-                    },
-                    error: (err) => reject(err),
-                });
-            });
-            
-            statusElement.textContent = `SUCCESS: **${sheetName}** data loaded successfully.`;
-            statusElement.className = 'status-item status-success';
-            return data;
-        } catch (error) {
-            console.error(`[LOAD FAILED] ${sheetName} attempt ${i + 1}:`, error.message);
-            if (i === maxRetries - 1) {
-                statusElement.textContent = `FAILURE: **${sheetName}** failed to load after ${maxRetries} attempts. Error: ${error.message}`;
-                statusElement.className = 'status-item status-error';
-                throw error; // Re-throw the error on the last attempt
-            }
-            // Exponential backoff
-            const delay = 1000 * (i + 1);
-            await new Promise(resolve => setTimeout(resolve, delay)); 
-        }
-    }
-}
-
-
-async function initializeApp() {
-    // Disable all buttons initially
-    [readingBtn, listeningBtn, vocabBtn, sentenceBtn].forEach(btn => btn.disabled = true);
-
-    let readingDataHeader, vocabDataNoHeader, sentenceDataNoHeader;
-    let successCount = 0;
-
-    // --- 1. Load Reading/Listening Data (Header required for easy filtering) ---
-    try {
-        readingDataHeader = await loadDataWithRetry(READING_LISTENING_URL, { header: true }, 'Listening & Reading', statusReading);
-        // Note: Assuming Vocab data is now separate, but keeping parsing simple here.
-        successCount++;
-    } catch (error) {
-        console.error("Critical failure during Reading/Listening load.");
-    }
-    
-    // --- 2. Load Vocab Data (No header, assuming simple theme/set/word structure) ---
-    try {
-        // Use header: false for flexible parsing of structured data (like the old vocab format)
-        vocabDataNoHeader = await loadDataWithRetry(VOCAB_URL, { header: false }, 'Vocabulary', statusVocab); 
-        successCount++;
-    } catch (error) {
-        console.error("Critical failure during Vocabulary load.");
-    }
-
-    // --- 3. Load Sentence Data (No header, assuming simple theme/set/sentence structure) ---
-    try {
-        // Use header: false for flexible parsing of structured data (like the old sentence format)
-        sentenceDataNoHeader = await loadDataWithRetry(SENTENCE_URL, { header: false }, 'Sentence', statusSentence); 
-        successCount++;
-    } catch (error) {
-        console.error("Critical failure during Sentence load.");
-    }
-
-    // --- DATA PARSING ---
-
-    // Parsing Reading/Listening Data
-    if (readingDataHeader) {
-        practice_allQuestions = readingDataHeader.map(q => ({
-            Skill: q.Skill,
-            Theme: q.Theme,
-            Question: q.Question,
-            Content: q.Content // This is the URL or text content
-        })).filter(q => q.Skill && q.Theme && q.Content);
-    }
-    
-    // Parsing Vocabulary Data
-    if (vocabDataNoHeader) {
-        vocab_vocabSets = parseStructuredData(vocabDataNoHeader.slice(1), 0, 1, 3, 4); // A, B, D, E (0, 1, 3, 4)
-    }
-
-    // Parsing Sentence Data
-    if (sentenceDataNoHeader) {
-        sentence_sentenceSets = parseStructuredData(sentenceDataNoHeader.slice(1), 0, 1, 3, 4); // A, B, D, E (0, 1, 3, 4)
-    }
-    
-    // Helper function to parse data with Theme and Set columns (for Vocab and Sentences)
-    function parseStructuredData(rows, themeCol, setCol, targetCol, englishCol) {
-        const sets = {};
-        let currentTheme = null; 
-        let currentKey = null;
-        let currentItems = [];
-
-        rows.forEach(row => {
-            if (!row || row.length <= Math.max(themeCol, setCol, targetCol, englishCol)) return; 
-
-            const themeInRow = row[themeCol]?.trim();
-            const set = row[setCol]?.trim();
-            const target = row[targetCol]?.trim();
-            const english = row[englishCol]?.trim();
-
-            if (themeInRow) {
-                currentTheme = themeInRow;
-            }
-
-            // Check if all essential columns have data
-            if (currentTheme && set && target && english) {
-                const newKey = `${currentTheme}.${set}`;
-                
-                if (currentKey && currentItems.length > 0 && currentKey !== newKey) {
-                    sets[currentKey] = currentItems;
-                    currentItems = [];
+                    };
+                    signIn();
                 }
-                currentKey = newKey;
-                currentItems.push({ target, english });
-            }
-        });
-        if (currentKey && currentItems.length > 0) {
-            sets[currentKey] = currentItems;
+                setIsAuthReady(true);
+            });
+
+            return () => unsubscribe();
+        } catch (e) {
+            console.error('Failed to initialize Firebase:', e);
+            // Fallback for environment issues
+            setIsAuthReady(true);
+            setUserId(crypto.randomUUID());
+            setIsLoadingData(false);
         }
-        return sets;
-    }
+    }, []);
+
+    // 2. Data Fetching using onSnapshot (The fix for "nothing showing")
+    useEffect(() => {
+        if (!db || !userId || !isAuthReady) return;
+
+        console.log('Attempting to subscribe to sentences collection...');
+
+        // Collection path for private user data
+        const sentencesPath = `artifacts/${appId}/users/${userId}/sentences`;
+        const q = query(collection(db, sentencesPath));
+
+        setIsLoadingData(true);
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedSentences = [];
+            const uniqueTopics = new Set(['all']); // Always include 'all'
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                fetchedSentences.push({ id: doc.id, ...data });
+                if (data.topic) {
+                    uniqueTopics.add(data.topic);
+                }
+            });
+
+            // Sort sentences (e.g., by topic or added time if available)
+            fetchedSentences.sort((a, b) => (a.topic || '').localeCompare(b.topic || ''));
+
+            setSentences(fetchedSentences);
+            setTopics(Array.from(uniqueTopics));
+            setIsLoadingData(false);
+            setCurrentSentenceIndex(0); // Reset index when data refreshes
+            console.log(`Successfully loaded ${fetchedSentences.length} sentences.`);
+
+            // IMPORTANT: If you are seeing data in the console here but not on the screen,
+            // the issue is in the rendering logic below.
+            if (fetchedSentences.length === 0) {
+                 console.warn("No sentences found in Firestore. Check your 'sentence spreadsheet' path and data fields.");
+            }
+        }, (error) => {
+            console.error('Error fetching sentences from Firestore:', error);
+            setIsLoadingData(false);
+        });
+
+        // Cleanup function for the listener
+        return () => unsubscribe();
+    }, [db, userId, isAuthReady]);
+
+    // 3. Application Logic
+    const filteredSentences = useMemo(() => {
+        if (selectedTopic === 'all') {
+            return sentences;
+        }
+        return sentences.filter(s => s.topic === selectedTopic);
+    }, [sentences, selectedTopic]);
 
 
-    console.log(`[SUMMARY] Reading/Listening Questions loaded: ${practice_allQuestions.length}`);
-    console.log(`[SUMMARY] Vocabulary Sets loaded: ${Object.keys(vocab_vocabSets).length}`);
-    console.log(`[SUMMARY] Sentence Sets loaded: ${Object.keys(sentence_sentenceSets).length}`);
-    
-    // --- FINAL UI UPDATE ---
-    if (successCount === 3) {
-        // Only enable buttons if all data sources loaded
-        [readingBtn, listeningBtn, vocabBtn, sentenceBtn].forEach(btn => btn.disabled = false);
-    }
-}
+    const handleTopicChange = (e) => {
+        setSelectedTopic(e.target.value);
+        setCurrentSentenceIndex(0); // Reset practice when topic changes
+        setIsCorrect(null);
+        setTypedText('');
+    };
 
-// ... (All other functions for Practice, Vocab, and Sentence sections remain the same) ...
+    const handleNextSentence = () => {
+        if (filteredSentences.length === 0) return;
 
-const vocab_themeMap = {
-    '1': '1-Personal world',
-    '2': '2-Lifestyle',
-    '3': '3-Neighbourhood',
-    '4': '4-Media & Tech',
-    '5': '5-Study & future',
-    '6': '6-Travel and Tourism'
+        // Cycle through sentences in the filtered list
+        const nextIndex = (currentSentenceIndex + 1) % filteredSentences.length;
+        setCurrentSentenceIndex(nextIndex);
+        setIsCorrect(null);
+        setTypedText('');
+    };
+
+    const handleCheck = () => {
+        if (!currentSentence || typedText.trim() === '') return;
+
+        // Use the sentence text for comparison, case-insensitive
+        const requiredText = (currentSentence.text || '').trim().toLowerCase();
+        const userText = typedText.trim().toLowerCase();
+
+        if (userText === requiredText) {
+            setIsCorrect(true);
+        } else {
+            setIsCorrect(false);
+        }
+    };
+
+    const displaySentence = filteredSentences[currentSentenceIndex]?.text || 'No sentence loaded.';
+
+
+    // --- UI Rendering ---
+
+    const renderContent = () => {
+        if (isLoadingData || !isAuthReady) {
+            return (
+                <div className="flex flex-col items-center justify-center p-8 text-gray-500">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                    <p className="mt-4 text-lg font-medium">Loading data and initializing...</p>
+                    <p className="text-sm">User ID: {userId || 'Authenticating...'}</p>
+                </div>
+            );
+        }
+
+        if (sentences.length === 0 && !isLoadingData) {
+            return (
+                <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-lg">
+                    <List className="w-12 h-12 mx-auto text-indigo-500 mb-4" />
+                    <h2 className="text-xl font-bold">No Sentences Found</h2>
+                    <p className="mt-2">
+                        Please ensure your "sentence spreadsheet" data is properly loaded into the
+                        Firestore collection: **`/artifacts/{appId}/users/{userId}/sentences`**.
+                    </p>
+                    <p className="mt-1 text-sm text-gray-400">
+                        Current User ID: {userId}
+                    </p>
+                </div>
+            );
+        }
+
+        return (
+            <>
+                {/* Topic Selector (Dropdown Menu) - Restored Style */}
+                <CustomSelect
+                    label="Select Topic"
+                    value={selectedTopic}
+                    onChange={handleTopicChange}
+                    options={topics.map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+                />
+
+                <div className="mt-8 p-6 md:p-8 bg-white rounded-xl shadow-2xl transition-all duration-300">
+                    <h2 className="text-xl font-bold text-indigo-600 mb-4">
+                        Sentence Practice
+                    </h2>
+
+                    {/* Sentence to Replicate */}
+                    <div className="min-h-[80px] p-4 mb-6 text-2xl font-light italic text-gray-700 bg-gray-50 border-l-4 border-indigo-400 rounded-lg select-none">
+                        {displaySentence}
+                    </div>
+
+                    {/* User Input Area */}
+                    <InputContainer className="mb-4">
+                        <textarea
+                            value={typedText}
+                            onChange={(e) => {
+                                setTypedText(e.target.value);
+                                setIsCorrect(null); // Clear feedback on typing
+                            }}
+                            placeholder="Type the sentence here..."
+                            rows="3"
+                            className="w-full resize-none text-lg text-gray-800 focus:outline-none bg-transparent"
+                        />
+                    </InputContainer>
+
+                    {/* Feedback and Correct Answer */}
+                    {isCorrect !== null && (
+                        <div className={`p-4 mb-4 rounded-xl font-semibold transition-all duration-300 ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {isCorrect ? (
+                                <div className="flex items-center">
+                                    <Check className="w-6 h-6 mr-2" /> Correct! Great job.
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="flex items-center mb-2">
+                                        <RotateCw className="w-6 h-6 mr-2" /> Incorrect. Try again or check the answer.
+                                    </div>
+                                    <p className="text-sm font-medium">
+                                        Expected: <span className="font-mono bg-red-200/50 p-1 rounded">{currentSentence.text}</span>
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Control Buttons - Restored Style */}
+                <div className="flex space-x-4 mt-6">
+                    <PrimaryButton
+                        onClick={handleCheck}
+                        disabled={!currentSentence || typedText.trim().length === 0}
+                        className="flex-1"
+                    >
+                        <Check className="inline w-5 h-5 mr-2" /> Check
+                    </PrimaryButton>
+                    <PrimaryButton
+                        onClick={handleNextSentence}
+                        className="flex-1"
+                    >
+                        <RotateCw className="inline w-5 h-5 mr-2" /> Next Sentence
+                    </PrimaryButton>
+                </div>
+
+                <p className="text-sm mt-4 text-center text-gray-400">
+                    Sentence {currentSentenceIndex + 1} of {filteredSentences.length} (Total: {sentences.length})
+                </p>
+            </>
+        );
+    };
+
+    return (
+        <div className="min-h-screen p-4 sm:p-8 bg-gray-100 font-sans">
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+                body { font-family: 'Inter', sans-serif; }
+            `}</style>
+            <div className="max-w-xl mx-auto">
+                <h1 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">
+                    Sentence Practice Tool
+                </h1>
+                <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+                    {renderContent()}
+                </div>
+            </div>
+        </div>
+    );
 };
 
-// --- PRACTICE SECTION FUNCTIONS ---
-
-function practice_populateTopics() {
-    const selectedType = currentPracticeTypeInput.value;
-    const themes = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Theme))]; 
-    
-    practice_topicSelect.innerHTML = '<option value="">-- Select Theme --</option>'; 
-    
-    if (themes.length === 0) {
-        practice_topicSelect.innerHTML = `<option>No Themes Available</option>`;
-        practice_questionSelect.innerHTML = `<option>Select a Theme first...</option>`;
-        return;
-    }
-    themes.sort().forEach(theme => {
-        if (theme) { 
-            const opt = document.createElement('option');
-            opt.value = theme;
-            opt.textContent = theme;
-            practice_topicSelect.appendChild(opt);
-        }
-    });
-
-    practice_populateQuestions();
-}
-
-practice_topicSelect.addEventListener('change', practice_populateQuestions);
-practice_generateBtn.addEventListener('click', practice_generateQuestion);
-
-function practice_populateQuestions() {
-    const selectedTheme = practice_topicSelect.value;
-    const selectedType = currentPracticeTypeInput.value;
-    practice_questionSelect.innerHTML = '';
-    
-    if (!selectedTheme) {
-        practice_questionSelect.innerHTML = `<option>Select a Theme first...</option>`;
-        return;
-    }
-
-    const questions = practice_allQuestions.filter(q => 
-        q.Skill === selectedType && q.Theme === selectedTheme
-    );
-
-    if (questions.length === 0) {
-        practice_questionSelect.innerHTML = `<option>No Questions Available</option>`;
-        return;
-    }
-    
-    questions.forEach((q, index) => {
-        const opt = document.createElement('option');
-        opt.value = q.Content; 
-        opt.textContent = q.Question; 
-        practice_questionSelect.appendChild(opt);
-    });
-}
-
-function practice_generateQuestion() {
-    const selectedContentUrl = practice_questionSelect.value;
-    
-    if (!selectedContentUrl) {
-        practice_questionDisplay.innerHTML = `<h2>Please select a Question.</h2><p>Please select a Theme first, then select a Question from the list.</p>`;
-        return;
-    }
-
-    const q = practice_allQuestions.find(item => item.Content === selectedContentUrl);
-    
-    if (!q) {
-        practice_questionDisplay.innerHTML = `<p>Error: Content not found.</p>`;
-        return;
-    }
-    
-    fullscreenBtn.classList.add('hide');
-    fullscreenBtn.onclick = null;
-
-    let contentHtml = q.Content;
-    const originalUrl = q.Content;
-
-    // Slide/Embed Logic
-    if (originalUrl && originalUrl.includes('google.com/presentation')) {
-        const fileIdMatch = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        const slideIdMatch = originalUrl.match(/[?#]slide=id\.([a-zA-Z0-9_.-]+)/);
-
-        if (fileIdMatch) {
-            const fileId = fileIdMatch[1];
-            let embedUrl;
-            let presentUrl;
-
-            if (slideIdMatch) {
-                const slideId = `id.${slideIdMatch[1]}`;
-                embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
-                presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
-            } else {
-                embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false`;
-                presentUrl = `https://docs.google.com/presentation/d/${fileId}/present`;
-            }
-            
-            contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
-            
-            fullscreenBtn.classList.remove('hide');
-            fullscreenBtn.onclick = () => { window.open(presentUrl, '_blank'); };
-        }
-    }
-    
-    practice_questionDisplay.innerHTML = `<h2>${q.Question}</h2>${contentHtml}`;
-}
-
-
-// --- VOCABULARY SECTION FUNCTIONS ---
-
-function vocab_initializeSelectors() {
-    const themes = [...new Set(Object.keys(vocab_vocabSets).map(k => k.split('.')[0]))];
-    vocab_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>';
-    themes.sort().forEach(theme => {
-        const opt = document.createElement('option');
-        opt.value = theme;
-        opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`;
-        vocab_themeSelect.appendChild(opt);
-    });
-    vocab_updateSetDropdown();
-}
-
-function vocab_updateSetDropdown() {
-    const theme = vocab_themeSelect.value;
-    vocab_setSelect.innerHTML = '<option value="">-- Select Set --</option>';
-    vocab_setSelect2.innerHTML = '';
-    
-    const none = document.createElement('option');
-    none.value = '';
-    none.textContent = '-- None --';
-    vocab_setSelect2.appendChild(none);
-
-    if (!theme) return;
-
-    const sets = [...new Set(Object.keys(vocab_vocabSets).filter(k => k.startsWith(theme + '.')).map(k => k))];
-    sets.sort().forEach(setName => {
-        const opt1 = document.createElement('option');
-        opt1.value = setName;
-        
-        const topicName = setName.substring(setName.indexOf('.') + 1);
-        
-        opt1.textContent = `${topicName} (${vocab_vocabSets[setName].length} words)`;
-        vocab_setSelect.appendChild(opt1);
-        vocab_setSelect2.appendChild(opt1.cloneNode(true));
-    });
-}
-
-vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
-vocab_generateBtn.addEventListener('click', vocab_generateTest);
-vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
-document.getElementById('vocab-print-btn').addEventListener('click', vocab_generatePrintVersion);
-
-function vocab_generateTest() {
-    const set1 = vocab_setSelect.value;
-    if (!set1) return;
-
-    let combined = [...vocab_vocabSets[set1]];
-    const set2 = vocab_setSelect2.value;
-    if (set2) {
-        combined = combined.concat(vocab_vocabSets[set2]);
-    }
-    
-    // De-duplicate
-    let uniqueCombined = Array.from(new Map(combined.map(item => [item.target, item])).values());
-    if (uniqueCombined.length === 0) return;
-
-    // Shuffle the entire unique list once
-    const shuffled = uniqueCombined.sort(() => 0.5 - Math.random());
-    
-    vocab_testBody.innerHTML = '';
-    const MAX_QUESTIONS = Math.min(shuffled.length, 10);
-
-    // Split the test evenly (or as close as possible)
-    const splitIndex = Math.floor(MAX_QUESTIONS / 2);
-
-    // Target -> English (First half)
-    const targetFirstQuestions = shuffled.slice(0, splitIndex);
-    targetFirstQuestions.forEach((item, i) => {
-        const row = vocab_testBody.insertRow();
-        row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
-    });
-
-    // English -> Target (Second half)
-    const englishFirstQuestions = shuffled.slice(splitIndex, MAX_QUESTIONS);
-    englishFirstQuestions.forEach((item, i) => {
-        const row = vocab_testBody.insertRow();
-        const rowNumber = targetFirstQuestions.length + i + 1; // Continue numbering
-        row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span>${item.target}</span></td><td>${item.english}</td>`;
-    });
-    
-    vocab_testContainer.classList.remove('hide');
-    vocab_testControls.classList.remove('hide');
-    vocab_printArea.classList.add('hide');
-    document.querySelectorAll('#vocab-test-container .answer-cell span').forEach(s => s.classList.remove('visible'));
-}
-
-function vocab_revealAnswers() {
-    document.querySelectorAll('#vocab-test-container .answer-cell span').forEach(s => s.classList.toggle('visible'));
-}
-
-function vocab_generatePrintVersion() {
-    vocab_printArea.classList.add('hide'); 
-    document.title = "Vocabulary Test - Print Version";
-    window.print();
-    document.title = "Language Practice Hub";
-}
-
-// --- SENTENCE SECTION FUNCTIONS ---
-
-function sentence_initializeSelectors() {
-    const themes = [...new Set(Object.keys(sentence_sentenceSets).map(k => k.split('.')[0]))];
-    sentence_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>';
-    themes.sort().forEach(theme => {
-        const opt = document.createElement('option');
-        opt.value = theme;
-        opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`; 
-        sentence_themeSelect.appendChild(opt);
-    });
-    sentence_updateSetDropdown();
-}
-
-function sentence_updateSetDropdown() {
-    const theme = sentence_themeSelect.value;
-    sentence_setSelect.innerHTML = '<option value="">-- Select Set --</option>';
-
-    if (!theme) return;
-
-    const sets = [...new Set(Object.keys(sentence_sentenceSets).filter(k => k.startsWith(theme + '.')).map(k => k))];
-    sets.sort().forEach(setName => {
-        const opt1 = document.createElement('option');
-        opt1.value = setName;
-        
-        const topicName = setName.substring(setName.indexOf('.') + 1);
-        
-        opt1.textContent = `${topicName} (${sentence_sentenceSets[setName].length} sentences)`;
-        sentence_setSelect.appendChild(opt1);
-    });
-}
-
-sentence_themeSelect.addEventListener('change', sentence_updateSetDropdown);
-sentence_generateBtn.addEventListener('click', sentence_generateActivity);
-sentence_revealBtn.addEventListener('click', sentence_revealAnswer);
-
-
-function sentence_generateActivity() {
-    const setKey = sentence_setSelect.value;
-    const activityType = sentence_activitySelect.value;
-    
-    // Hide controls/answers on new generation
-    sentence_answerDisplay.classList.add('hide');
-    sentence_testControls.classList.add('hide');
-    sentence_activityDisplay.innerHTML = 'Generating activity...';
-    
-    if (!setKey || !activityType) {
-        sentence_activityDisplay.innerHTML = '<p>Please select a Theme, Set, and Activity.</p>';
-        return;
-    }
-
-    const sentences = sentence_sentenceSets[setKey];
-    if (!sentences || sentences.length === 0) {
-        sentence_activityDisplay.innerHTML = '<p>No sentences found for the selected set.</p>';
-        return;
-    }
-
-    // Pick a random sentence
-    const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
-    let questionHtml = '';
-    let answerText = '';
-    
-    const targetSentence = randomSentence.target; // Col D (Target Sentence)
-    const englishSentence = randomSentence.english; // Col E (English Sentence)
-
-    // Helper functions
-    const removeSpaces = (text) => text.replace(/\s/g, '');
-    const shuffleWords = (text) => {
-        // Simple word split, trying to keep punctuation
-        const words = text.match(/\w+|[.,!?;:()"]/g) || [];
-        if (words.length <= 1) return text;
-
-        // Separate words from punctuation/spaces
-        const pureWords = words.filter(w => w.match(/\w/));
-        const punctuation = words.filter(w => !w.match(/\w/));
-        
-        // Simple shuffle of pure words
-        const shuffledPureWords = pureWords.sort(() => 0.5 - Math.random());
-        
-        // Rebuild the sentence by mixing them
-        let rebuiltSentence = [];
-        let wordIndex = 0;
-        let puncIndex = 0;
-
-        // This approach is more complex to get perfect, simplified to just shuffle and join
-        const simpleShuffle = text.split(/\s+/).sort(() => 0.5 - Math.random()).join(' ');
-
-        return simpleShuffle.replace(/\s+([.,!?;:"])/g, '$1'); // Clean up spaces before punctuation
-    };
-    
-    const removeChars = (text, type) => {
-        // Regex includes common accented French vowels
-        const vowels = /[aeiouyAEIOUYáéíóúýÁÉÍÓÚÝéèàùâêîôûëïüÿæœçÉÈÀÙÂÊÎÔÛËÏÜŸÆŒÇ]/g;
-        // Consonants is everything that is NOT a vowel, whitespace, or punctuation
-        const consonants = /[^aeiouyAEIOUYáéíóúýÁÉÍÓÚÝéèàùâêîôûëïüÿæœçÉÈÀÙÂÊÎÔÛËÏÜŸÆŒÇ\s,.;:?!—]/g;
-        if (type === 'vowels') return text.replace(vowels, '_');
-        if (type === 'consonants') return text.replace(consonants, '_');
-        return text;
-    };
-
-
-    switch (activityType) {
-        case 'break_flow':
-            questionHtml = `<h3>Break the Flow</h3><p>Remove the spaces and write the original sentence (capitalization and punctuation still apply):</p><div style="font-size: 1.4em; padding: 15px; background-color: #ffe0b2; border-radius: 6px; overflow-wrap: break-word;">${removeSpaces(targetSentence)}</div>`;
-            answerText = targetSentence;
-            break;
-        case 'unjumble':
-            questionHtml = `<h3>Unjumble the Words</h3><p>Reorder the following words to form the correct sentence:</p><div style="font-size: 1.4em; padding: 15px; background-color: #e0f2f1; border-radius: 6px; overflow-wrap: break-word;">${shuffleWords(targetSentence)}</div>`;
-            answerText = targetSentence;
-            break;
-        case 'missing_vowel':
-            questionHtml = `<h3>Missing Vowels</h3><p>Fill in the missing vowels in the following sentence:</p><div style="font-size: 1.4em; padding: 15px; background-color: #e3f2fd; border-radius: 6px; overflow-wrap: break-word;">${removeChars(targetSentence, 'vowels')}</div>`;
-            answerText = targetSentence;
-            break;
-        case 'missing_consonant':
-            questionHtml = `<h3>Missing Consonants</h3><p>Fill in the missing consonants in the following sentence:</p><div style="font-size: 1.4em; padding: 15px; background-color: #fce4ec; border-radius: 6px; overflow-wrap: break-word;">${removeChars(targetSentence, 'consonants')}</div>`;
-            answerText = targetSentence;
-            break;
-        case 'random_fr':
-            questionHtml = `<h3>Translation (Target Language to English)</h3><p>Translate the following sentence into English:</p><div style="font-size: 1.4em; padding: 15px; background-color: #fffde7; border-radius: 6px; overflow-wrap: break-word;">${targetSentence}</div>`;
-            answerText = englishSentence;
-            break;
-        case 'random_en':
-            questionHtml = `<h3>Translation (English to Target Language)</h3><p>Translate the following sentence into the Target Language:</p><div style="font-size: 1.4em; padding: 15px; background-color: #fffde7; border-radius: 6px; overflow-wrap: break-word;">${englishSentence}</div>`;
-            answerText = targetSentence;
-            break;
-        default:
-            questionHtml = '<p>Activity not recognized. Please select a valid activity.</p>';
-            answerText = '';
-            break;
-    }
-
-    sentence_activityDisplay.innerHTML = questionHtml;
-    currentSentenceData.answer = answerText;
-    
-    if (answerText) {
-        sentence_answerText.textContent = answerText;
-        sentence_testControls.classList.remove('hide');
-    }
-}
-
-function sentence_revealAnswer() {
-    sentence_answerDisplay.classList.toggle('hide');
-}
-
-// --- Initialization ---
-initializeApp();
-</script>
-</body>
-</html>
+export default App;
