@@ -6,7 +6,7 @@
     <title>GCSE Speaking Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
         .section { background-color: #fdfdfd; border: 1px solid #dee2e6; border-radius: 5px; padding: 20px; }
         .rp-grid-3x2, .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
@@ -48,13 +48,13 @@
 <body>
 
     <div class="container">
-        <h1>📋 GCSE Speaking Card Allocator</h1>
+        <h1>GCSE Speaking Card Allocator 📋</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
             <label for="load-from-file-input" class="action-btn-label setup-action-btn" style="margin-left: 10px;">📂 Load Allocation from File</label>
             <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
-            <button id="generate-table-btn" class="action-btn" style="margin-left: 10px;">Lock & Generate Table</button>
+            <button id="generate-table-btn" class="action-btn" style="margin-left: 10px;">Generate Table & Lock</button>
             <button id="edit-config-btn" class="edit-btn" style="margin-left: 10px; display: none;">✏️ Edit Config & Students</button>
             <span id="save-confirm-msg" class="save-confirm">Progress Saved to File!</span>
             <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset Page</button>
@@ -84,7 +84,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
                 <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">Step 4: Set Themes & Allocate Cards</h2>
                 <div>
-                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE</button>
+                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE CARDS</button>
                     <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
                 </div>
             </div>
@@ -130,8 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeStudiedThemes() {
         const grid = document.getElementById('studied-themes-grid');
         grid.innerHTML = Object.entries(THEMES).map(([num, name]) => 
-            `<label><input type="checkbox" id="studied-theme-${num}" value="${num}">${name}</label>`
+            `<label><input type="checkbox" class="studied-theme-checkbox" id="studied-theme-${num}" value="${num}">${name}</label>`
         ).join('');
+        // MODIFIED/FIXED: Add event listeners here
+        document.querySelectorAll('.studied-theme-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', handleStudiedThemeChange);
+        });
     }
 
     function initializeRpConfig() {
@@ -488,6 +492,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     row.querySelector('.photo-result').innerHTML = '';
                 }
             });
+        });
+    }
+
+    // ADDED: New function to handle dynamic theme choice updates
+    function handleStudiedThemeChange(event) {
+        if (allocationSection.style.display !== 'block') {
+            return; // Only run if the table is visible
+        }
+
+        if (!confirm("Updating studied themes will re-randomize choices for all students. This will clear any 'Selected Theme' that is no longer valid. Continue?")) {
+            event.target.checked = !event.target.checked; // Revert the checkbox change
+            return;
+        }
+
+        const studiedThemes = [];
+        document.querySelectorAll('.studied-theme-checkbox:checked').forEach(cb => studiedThemes.push(cb.value));
+
+        if (studiedThemes.length < 2) {
+            alert("You must have at least two themes selected.");
+            event.target.checked = !event.target.checked; // Revert
+            return;
+        }
+
+        const themePairs = [];
+        for (let i = 0; i < studiedThemes.length; i++) {
+            for (let j = i + 1; j < studiedThemes.length; j++) {
+                themePairs.push([studiedThemes[i], studiedThemes[j]]);
+            }
+        }
+        for (let i = themePairs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [themePairs[i], themePairs[j]] = [themePairs[j], themePairs[i]];
+        }
+
+        allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
+            const selectedThemeDropdown = row.querySelector('.selected-theme');
+            const previousSelection = selectedThemeDropdown.value;
+            
+            const pair = themePairs[index % themePairs.length];
+            const [choice1, choice2] = Math.random() < 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+
+            row.cells[3].dataset.themeId = choice1;
+            row.cells[3].textContent = THEMES[choice1];
+            row.cells[4].dataset.themeId = choice2;
+            row.cells[4].textContent = THEMES[choice2];
+
+            updateSelectedThemeForRow(row);
+
+            if (previousSelection && (previousSelection === choice1 || previousSelection === choice2)) {
+                selectedThemeDropdown.value = previousSelection;
+                colorCodeSelectedTheme(selectedThemeDropdown);
+            } else {
+                row.querySelector('.ra-result').innerHTML = '';
+                row.querySelector('.rp-result').innerHTML = '';
+                row.querySelector('.photo-result').innerHTML = '';
+            }
         });
     }
 
