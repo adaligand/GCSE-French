@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Language  Hub</title>
+  <title>Language f Hub</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -172,6 +172,7 @@
         flex-direction: row;
         justify-content: space-between;
         width: 100%;
+        height: 100vh; /* full page height */
         box-sizing: border-box;
         page-break-inside: avoid;
     }
@@ -179,6 +180,10 @@
     #vocab-print-area > div {
         flex: 0 0 49%; /* half width minus small gap */
         margin-right: 1%; /* gap between tables */
+        display: flex;
+        flex-direction: column;
+        justify-content: stretch;
+        height: 100%;
         page-break-inside: avoid;
     }
 
@@ -188,6 +193,7 @@
 
     #vocab-print-area table {
         width: 100%;
+        height: 100%; /* table fills div height */
         border-collapse: collapse;
         font-size: 12pt;
         page-break-inside: avoid;
