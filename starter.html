@@ -348,13 +348,12 @@ function practice_populateTopics() {
     });
 }
 
-// MODIFIED: Manages the new fullscreen button
+// MODIFIED: This function now correctly handles slide-specific URLs
 function practice_generateQuestion() {
     const topic = practice_topicSelect.value;
     const type = currentPracticeTypeInput.value;
     const questions = practice_allQuestions.filter(q => q.Skill === type && q.Topic === topic);
 
-    // Hide the fullscreen button by default and clear any previous link
     fullscreenBtn.classList.add('hide');
     fullscreenBtn.onclick = null;
 
@@ -362,24 +361,33 @@ function practice_generateQuestion() {
         practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
         return;
     }
+    
     const q = questions[Math.floor(Math.random() * questions.length)];
-    let content = q.Content;
+    let contentHtml = q.Content; // Assume it's not a slide at first
+    const originalUrl = q.Content;
 
-    if (content.includes('google.com/presentation')) {
-        const fileId = content.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
-        if (fileId) {
-            // Set the iframe content (without the old button)
-            content = `<iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false" allowfullscreen></iframe>`;
-            
-            // Show the dedicated fullscreen button in the controls and assign its action
-            fullscreenBtn.classList.remove('hide');
-            fullscreenBtn.onclick = () => {
-                window.open(`https://docs.google.com/presentation/d/${fileId}/present`, '_blank');
-            };
-        }
+    if (originalUrl && originalUrl.includes('google.com/presentation')) {
+        // Create an embeddable URL by modifying the original link
+        let embedUrl = originalUrl
+            .replace('/edit', '/embed?start=false&loop=false')
+            .replace('/present', '/embed?start=false&loop=false')
+            .replace('#slide=', '&slide='); // Convert hash to URL parameter
+
+        contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
+        
+        // Create a presentable URL for the fullscreen button
+        let presentUrl = originalUrl
+            .replace('/edit', '/present');
+        
+        fullscreenBtn.classList.remove('hide');
+        fullscreenBtn.onclick = () => {
+            window.open(presentUrl, '_blank');
+        };
     }
-    practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${content}`;
+    
+    practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${contentHtml}`;
 }
+
 
 // --- Vocabulary Section Logic ---
 const vocab_themeMap = {
@@ -481,7 +489,6 @@ function vocab_generatePrintVersion() {
 
 // --- Start the App ---
 initializeApp();
-
 </script>
 </body>
 </html>
