@@ -304,18 +304,41 @@ async function initializeApp() {
 
         practice_allQuestions = practiceData.filter(q => q.Skill && q.Topic && q.Content);
 
+        // MODIFIED: Replaced the data processing logic with the one from your working code.
+        vocab_vocabSets = {};
+        let currentKey = null;
+        let currentWords = [];
+
         vocabData.forEach(row => {
+            if (!row || row.length < 5) return; // Skip malformed rows
+
             const theme = row[0]?.trim();
             const set = row[1]?.trim();
             const target = row[3]?.trim();
             const english = row[4]?.trim();
-            if (theme && set && target && english) {
-                const key = `${theme}.${set}`;
-                if (!vocab_vocabSets[key]) vocab_vocabSets[key] = [];
-                vocab_vocabSets[key].push({ target, english });
+
+            // A new set is defined when Column B (the set/topic) has a value.
+            if (theme && set) {
+                // First, save the words from the PREVIOUS set before starting a new one.
+                if (currentKey && currentWords.length > 0) {
+                    vocab_vocabSets[currentKey] = currentWords;
+                }
+                // Now, start the NEW set.
+                currentKey = `${theme}.${set}`;
+                currentWords = []; // Reset the word collector array
+            }
+
+            // Add the current row's words (if they exist) to the current set.
+            if (currentKey && target && english) {
+                currentWords.push({ target, english });
             }
         });
 
+        // After the loop, we must save the very last set that was being collected.
+        if (currentKey && currentWords.length > 0) {
+            vocab_vocabSets[currentKey] = currentWords;
+        }
+        
         vocab_initializeSelectors();
 
         readingBtn.disabled = false;
@@ -348,7 +371,6 @@ function practice_populateTopics() {
     });
 }
 
-// MODIFIED: This function now correctly handles slide-specific URLs
 function practice_generateQuestion() {
     const topic = practice_topicSelect.value;
     const type = currentPracticeTypeInput.value;
@@ -363,26 +385,21 @@ function practice_generateQuestion() {
     }
     
     const q = questions[Math.floor(Math.random() * questions.length)];
-    let contentHtml = q.Content; // Assume it's not a slide at first
+    let contentHtml = q.Content;
     const originalUrl = q.Content;
 
     if (originalUrl && originalUrl.includes('google.com/presentation')) {
-        // Create an embeddable URL by modifying the original link
         let embedUrl = originalUrl
             .replace('/edit', '/embed?start=false&loop=false')
             .replace('/present', '/embed?start=false&loop=false')
-            .replace('#slide=', '&slide='); // Convert hash to URL parameter
+            .replace('#slide=', '&slide=');
 
         contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
         
-        // Create a presentable URL for the fullscreen button
-        let presentUrl = originalUrl
-            .replace('/edit', '/present');
+        let presentUrl = originalUrl.replace('/edit', '/present');
         
         fullscreenBtn.classList.remove('hide');
-        fullscreenBtn.onclick = () => {
-            window.open(presentUrl, '_blank');
-        };
+        fullscreenBtn.onclick = () => { window.open(presentUrl, '_blank'); };
     }
     
     practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${contentHtml}`;
@@ -489,6 +506,7 @@ function vocab_generatePrintVersion() {
 
 // --- Start the App ---
 initializeApp();
+
 </script>
 </body>
 </html>
