@@ -145,9 +145,7 @@
     }
     .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
     .answer-cell span.visible { visibility: visible; }
-
-    /* --- PRINT --- */
- /* --- PRINT --- */
+/* --- PRINT --- */
     @media print {
         /* Set page to landscape and adjust margins */
         @page { size: A4 landscape; margin: 1cm; }
@@ -168,9 +166,9 @@
 
         /* --- Quiz Grid Styling --- */
         #vocab-test-container {
-            display: block !important;
+            /* THIS IS THE KEY FIX: Forces display even if it has the .hide class */
+            display: block !important; 
             width: 100%;
-            /* Use a CSS grid or flex to attempt 2-column layout (Browser dependent) */
             column-count: 2;
             column-gap: 20px;
         }
@@ -179,8 +177,8 @@
         #vocab-test-container table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11pt; /* Smaller font for better fit */
-            page-break-inside: avoid; /* Keep tables from breaking across columns/pages */
+            font-size: 11pt; 
+            page-break-inside: avoid; 
             margin-bottom: 20px;
         }
         
