@@ -1,364 +1,355 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, onSnapshot, collection, query } from 'firebase/firestore';
-import { Check, RotateCw, ChevronDown, List, Loader2 } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentence Practice Tool</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Apply Inter font and basic styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
 
-// --- Firebase and Environment Setup ---
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-// Helper to handle base64 to ArrayBuffer for audio (not used now, but useful if adding TTS)
-// function base64ToArrayBuffer(base64) {
-//     const binaryString = atob(base64);
-//     const len = binaryString.length;
-//     const bytes = new Uint8Array(len);
-//     for (let i = 0; i < len; i++) {
-//         bytes[i] = binaryString.charCodeAt(i);
-//     }
-//     return bytes.buffer;
-// }
-
-// --- Utility Components ---
-
-/** A visually styled primary button. Styles restored to be prominent and rounded. */
-const PrimaryButton = ({ children, onClick, disabled, className = '' }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        className={`
-            px-6 py-3 font-semibold text-white transition-all duration-200 rounded-xl shadow-lg
-            transform hover:scale-[1.02] active:scale-[0.98]
-            ${disabled
-                ? 'bg-gray-400 cursor-not-allowed shadow-none'
-                : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/50'
-            }
-            ${className}
-        `}
-    >
-        {children}
-    </button>
-);
-
-/** A visually styled text input/select container. */
-const InputContainer = ({ children, className = '' }) => (
-    <div className={`relative w-full ${className}`}>
-        <div className="flex items-center w-full px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-inner focus-within:ring-2 focus-within:ring-indigo-500 transition-all duration-150">
-            {children}
-        </div>
-    </div>
-);
-
-/** Custom styled dropdown component (Topic Selector). Styles restored. */
-const CustomSelect = ({ value, onChange, options, label }) => (
-    <div className="relative w-full">
-        <label htmlFor="topic-select" className="block mb-1 text-sm font-medium text-gray-700">{label}</label>
-        <div className="relative">
-            <select
-                id="topic-select"
-                value={value}
-                onChange={onChange}
-                className="block w-full appearance-none bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-10 text-gray-800 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow duration-150 cursor-pointer font-medium"
-            >
-                {options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+    <div class="max-w-xl mx-auto">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">
+            Sentence Practice Tool
+        </h1>
+        <div id="app-container" class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+            <!-- Content will be rendered here by JavaScript -->
+            <div id="loading-spinner" class="flex flex-col items-center justify-center p-8 text-gray-500">
+                <svg class="w-8 h-8 animate-spin text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-lg font-medium">Loading data and initializing...</p>
+                <p class="text-sm" id="user-id-display">User ID: Authenticating...</p>
             </div>
         </div>
+        <div class="text-center mt-4 text-xs text-gray-500">
+            <p id="app-id-display"></p>
+        </div>
     </div>
-);
 
+    <!-- Firebase and Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- Main Application Component ---
-const App = () => {
-    const [db, setDb] = useState(null);
-    const [auth, setAuth] = useState(null);
-    const [userId, setUserId] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
+        // --- Firebase and Environment Setup ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    // State for the actual application data
-    const [sentences, setSentences] = useState([]);
-    const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
-    const [isCorrect, setIsCorrect] = useState(null);
-    const [typedText, setTypedText] = useState('');
-    const [topics, setTopics] = useState([]);
-    const [selectedTopic, setSelectedTopic] = useState('all');
-    const [isLoadingData, setIsLoadingData] = useState(true);
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
 
-    const currentSentence = useMemo(() => {
-        if (sentences.length === 0) return null;
-        return sentences[currentSentenceIndex];
-    }, [sentences, currentSentenceIndex]);
+        // --- Application State ---
+        let sentences = [];
+        let currentSentenceIndex = 0;
+        let isCorrect = null;
+        let typedText = '';
+        let topics = ['all'];
+        let selectedTopic = 'all';
 
-    // 1. Firebase Initialization and Authentication
-    useEffect(() => {
-        try {
-            const app = initializeApp(firebaseConfig);
-            const authInstance = getAuth(app);
-            const dbInstance = getFirestore(app);
+        document.getElementById('app-id-display').textContent = `Current App ID: ${appId}`;
 
-            // Log initialization status
-            console.log('Firebase initialized. App ID:', appId);
-            // setLogLevel('Debug'); // Uncomment for detailed Firestore logs
-
-            setDb(dbInstance);
-            setAuth(authInstance);
-
-            const unsubscribe = onAuthStateChanged(authInstance, (user) => {
-                if (user) {
-                    setUserId(user.uid);
-                    console.log('User signed in. UID:', user.uid);
-                } else {
-                    console.log('No user found. Attempting sign-in.');
-                    const signIn = async () => {
-                        try {
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(authInstance, initialAuthToken);
-                            } else {
-                                await signInAnonymously(authInstance);
-                            }
-                        } catch (error) {
-                            console.error('Firebase Auth Error:', error);
-                            // Fallback to a random ID if sign-in fails, though data won't persist/sync well.
-                            setUserId(crypto.randomUUID());
-                        }
-                    };
-                    signIn();
-                }
-                setIsAuthReady(true);
-            });
-
-            return () => unsubscribe();
-        } catch (e) {
-            console.error('Failed to initialize Firebase:', e);
-            // Fallback for environment issues
-            setIsAuthReady(true);
-            setUserId(crypto.randomUUID());
-            setIsLoadingData(false);
-        }
-    }, []);
-
-    // 2. Data Fetching using onSnapshot (The fix for "nothing showing")
-    useEffect(() => {
-        if (!db || !userId || !isAuthReady) return;
-
-        console.log('Attempting to subscribe to sentences collection...');
-
-        // Collection path for private user data
-        const sentencesPath = `artifacts/${appId}/users/${userId}/sentences`;
-        const q = query(collection(db, sentencesPath));
-
-        setIsLoadingData(true);
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedSentences = [];
-            const uniqueTopics = new Set(['all']); // Always include 'all'
-
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                fetchedSentences.push({ id: doc.id, ...data });
-                if (data.topic) {
-                    uniqueTopics.add(data.topic);
-                }
-            });
-
-            // Sort sentences (e.g., by topic or added time if available)
-            fetchedSentences.sort((a, b) => (a.topic || '').localeCompare(b.topic || ''));
-
-            setSentences(fetchedSentences);
-            setTopics(Array.from(uniqueTopics));
-            setIsLoadingData(false);
-            setCurrentSentenceIndex(0); // Reset index when data refreshes
-            console.log(`Successfully loaded ${fetchedSentences.length} sentences.`);
-
-            // IMPORTANT: If you are seeing data in the console here but not on the screen,
-            // the issue is in the rendering logic below.
-            if (fetchedSentences.length === 0) {
-                 console.warn("No sentences found in Firestore. Check your 'sentence spreadsheet' path and data fields.");
+        // Utility to get the filtered list based on the selected topic
+        const getFilteredSentences = () => {
+            if (selectedTopic === 'all') {
+                return sentences;
             }
-        }, (error) => {
-            console.error('Error fetching sentences from Firestore:', error);
-            setIsLoadingData(false);
-        });
+            return sentences.filter(s => s.topic === selectedTopic);
+        };
 
-        // Cleanup function for the listener
-        return () => unsubscribe();
-    }, [db, userId, isAuthReady]);
+        // --- Core UI Rendering Logic ---
 
-    // 3. Application Logic
-    const filteredSentences = useMemo(() => {
-        if (selectedTopic === 'all') {
-            return sentences;
-        }
-        return sentences.filter(s => s.topic === selectedTopic);
-    }, [sentences, selectedTopic]);
+        const renderApp = () => {
+            const container = document.getElementById('app-container');
+            if (!isAuthReady || !userId) {
+                // If not ready, keep the loading spinner visible
+                document.getElementById('user-id-display').textContent = `User ID: ${userId || 'Authenticating...'}`;
+                return;
+            }
+
+            // Hide the spinner once ready
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) spinner.style.display = 'none';
+
+            if (sentences.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-gray-500 bg-white rounded-xl shadow-lg">
+                        <svg class="w-12 h-12 mx-auto text-indigo-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4"></path></svg>
+                        <h2 class="text-xl font-bold">No Sentences Found</h2>
+                        <p class="mt-2">
+                            Please ensure your spreadsheet data is imported into the
+                            Firestore collection: <strong>/artifacts/${appId}/users/${userId}/sentences</strong> with a field named <strong>text</strong>.
+                        </p>
+                        <p class="mt-1 text-sm text-gray-400">
+                            Current User ID: ${userId}
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const currentSentence = getFilteredSentences()[currentSentenceIndex];
+            const displaySentence = currentSentence ? currentSentence.text : 'No sentence loaded.';
+            const filteredCount = getFilteredSentences().length;
+
+            // Generate Topic Selector Options
+            const optionsHtml = topics.map(t => `
+                <option value="${t}" ${t === selectedTopic ? 'selected' : ''}>
+                    ${t.charAt(0).toUpperCase() + t.slice(1)}
+                </option>
+            `).join('');
+
+            // Generate Feedback HTML
+            let feedbackHtml = '';
+            if (isCorrect !== null) {
+                const feedbackClass = isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                const icon = isCorrect ? 
+                    `<svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : 
+                    `<svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12m16 0A8.001 8.001 0 004 12"></path></svg>`;
+                
+                if (isCorrect) {
+                    feedbackHtml = `
+                        <div class="p-4 mt-4 rounded-xl font-semibold transition-all duration-300 ${feedbackClass}">
+                            <div class="flex items-center">
+                                ${icon} Correct! Great job.
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    feedbackHtml = `
+                        <div class="p-4 mt-4 rounded-xl font-semibold transition-all duration-300 ${feedbackClass}">
+                            <div class="flex items-center mb-2">
+                                ${icon} Incorrect. Try again or check the answer.
+                            </div>
+                            <p class="text-sm font-medium">
+                                Expected: <span class="font-mono bg-red-200/50 p-1 rounded break-words">${currentSentence.text}</span>
+                            </p>
+                        </div>
+                    `;
+                }
+            }
 
 
-    const handleTopicChange = (e) => {
-        setSelectedTopic(e.target.value);
-        setCurrentSentenceIndex(0); // Reset practice when topic changes
-        setIsCorrect(null);
-        setTypedText('');
-    };
-
-    const handleNextSentence = () => {
-        if (filteredSentences.length === 0) return;
-
-        // Cycle through sentences in the filtered list
-        const nextIndex = (currentSentenceIndex + 1) % filteredSentences.length;
-        setCurrentSentenceIndex(nextIndex);
-        setIsCorrect(null);
-        setTypedText('');
-    };
-
-    const handleCheck = () => {
-        if (!currentSentence || typedText.trim() === '') return;
-
-        // Use the sentence text for comparison, case-insensitive
-        const requiredText = (currentSentence.text || '').trim().toLowerCase();
-        const userText = typedText.trim().toLowerCase();
-
-        if (userText === requiredText) {
-            setIsCorrect(true);
-        } else {
-            setIsCorrect(false);
-        }
-    };
-
-    const displaySentence = filteredSentences[currentSentenceIndex]?.text || 'No sentence loaded.';
-
-
-    // --- UI Rendering ---
-
-    const renderContent = () => {
-        if (isLoadingData || !isAuthReady) {
-            return (
-                <div className="flex flex-col items-center justify-center p-8 text-gray-500">
-                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-                    <p className="mt-4 text-lg font-medium">Loading data and initializing...</p>
-                    <p className="text-sm">User ID: {userId || 'Authenticating...'}</p>
+            container.innerHTML = `
+                <!-- Topic Selector (Dropdown Menu) -->
+                <div class="relative w-full mb-8">
+                    <label for="topic-select" class="block mb-1 text-sm font-medium text-gray-700">Select Topic</label>
+                    <div class="relative">
+                        <select
+                            id="topic-select"
+                            onchange="handleTopicChange(event)"
+                            class="block w-full appearance-none bg-white border border-gray-300 rounded-xl py-3 pl-4 pr-10 text-gray-800 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow duration-150 cursor-pointer font-medium"
+                        >
+                            ${optionsHtml}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
                 </div>
-            );
-        }
 
-        if (sentences.length === 0 && !isLoadingData) {
-            return (
-                <div className="p-8 text-center text-gray-500 bg-white rounded-xl shadow-lg">
-                    <List className="w-12 h-12 mx-auto text-indigo-500 mb-4" />
-                    <h2 className="text-xl font-bold">No Sentences Found</h2>
-                    <p className="mt-2">
-                        Please ensure your "sentence spreadsheet" data is properly loaded into the
-                        Firestore collection: **`/artifacts/{appId}/users/{userId}/sentences`**.
-                    </p>
-                    <p className="mt-1 text-sm text-gray-400">
-                        Current User ID: {userId}
-                    </p>
-                </div>
-            );
-        }
-
-        return (
-            <>
-                {/* Topic Selector (Dropdown Menu) - Restored Style */}
-                <CustomSelect
-                    label="Select Topic"
-                    value={selectedTopic}
-                    onChange={handleTopicChange}
-                    options={topics.map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
-                />
-
-                <div className="mt-8 p-6 md:p-8 bg-white rounded-xl shadow-2xl transition-all duration-300">
-                    <h2 className="text-xl font-bold text-indigo-600 mb-4">
+                <div class="p-6 md:p-8 bg-white rounded-xl shadow-2xl transition-all duration-300">
+                    <h2 class="text-xl font-bold text-indigo-600 mb-4">
                         Sentence Practice
                     </h2>
 
-                    {/* Sentence to Replicate */}
-                    <div className="min-h-[80px] p-4 mb-6 text-2xl font-light italic text-gray-700 bg-gray-50 border-l-4 border-indigo-400 rounded-lg select-none">
-                        {displaySentence}
+                    <!-- Sentence to Replicate -->
+                    <div class="min-h-[80px] p-4 mb-6 text-2xl font-light italic text-gray-700 bg-gray-50 border-l-4 border-indigo-400 rounded-lg select-none">
+                        ${displaySentence}
                     </div>
 
-                    {/* User Input Area */}
-                    <InputContainer className="mb-4">
+                    <!-- User Input Area -->
+                    <div class="relative w-full">
                         <textarea
-                            value={typedText}
-                            onChange={(e) => {
-                                setTypedText(e.target.value);
-                                setIsCorrect(null); // Clear feedback on typing
-                            }}
+                            id="typed-text-area"
+                            oninput="handleInput(event)"
                             placeholder="Type the sentence here..."
                             rows="3"
-                            className="w-full resize-none text-lg text-gray-800 focus:outline-none bg-transparent"
-                        />
-                    </InputContainer>
+                            class="w-full resize-none text-lg text-gray-800 focus:outline-none bg-white border border-gray-300 rounded-xl py-3 px-4 shadow-md focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
+                        >${typedText}</textarea>
+                    </div>
 
-                    {/* Feedback and Correct Answer */}
-                    {isCorrect !== null && (
-                        <div className={`p-4 mb-4 rounded-xl font-semibold transition-all duration-300 ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {isCorrect ? (
-                                <div className="flex items-center">
-                                    <Check className="w-6 h-6 mr-2" /> Correct! Great job.
-                                </div>
-                            ) : (
-                                <div>
-                                    <div className="flex items-center mb-2">
-                                        <RotateCw className="w-6 h-6 mr-2" /> Incorrect. Try again or check the answer.
-                                    </div>
-                                    <p className="text-sm font-medium">
-                                        Expected: <span className="font-mono bg-red-200/50 p-1 rounded">{currentSentence.text}</span>
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <!-- Feedback -->
+                    ${feedbackHtml}
                 </div>
 
-                {/* Control Buttons - Restored Style */}
-                <div className="flex space-x-4 mt-6">
-                    <PrimaryButton
-                        onClick={handleCheck}
-                        disabled={!currentSentence || typedText.trim().length === 0}
-                        className="flex-1"
+                <!-- Control Buttons - Restored Style -->
+                <div class="flex space-x-4 mt-6">
+                    <button
+                        onclick="handleCheck()"
+                        ${!currentSentence || typedText.trim().length === 0 ? 'disabled' : ''}
+                        class="flex-1 px-6 py-3 font-semibold text-white transition-all duration-200 rounded-xl shadow-lg transform hover:scale-[1.02] active:scale-[0.98] ${!currentSentence || typedText.trim().length === 0 ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/50'}"
                     >
-                        <Check className="inline w-5 h-5 mr-2" /> Check
-                    </PrimaryButton>
-                    <PrimaryButton
-                        onClick={handleNextSentence}
-                        className="flex-1"
+                        <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Check
+                    </button>
+                    <button
+                        onclick="handleNextSentence()"
+                        class="flex-1 px-6 py-3 font-semibold text-white transition-all duration-200 rounded-xl shadow-lg transform hover:scale-[1.02] active:scale-[0.98] bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-indigo-500/50"
                     >
-                        <RotateCw className="inline w-5 h-5 mr-2" /> Next Sentence
-                    </PrimaryButton>
+                        <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12m16 0A8.001 8.001 0 004 12"></path></svg> Next Sentence
+                    </button>
                 </div>
 
-                <p className="text-sm mt-4 text-center text-gray-400">
-                    Sentence {currentSentenceIndex + 1} of {filteredSentences.length} (Total: {sentences.length})
+                <p class="text-sm mt-4 text-center text-gray-400">
+                    Sentence ${currentSentenceIndex + 1} of ${filteredCount} (Total: ${sentences.length})
                 </p>
-            </>
-        );
-    };
+            `;
+        };
 
-    return (
-        <div className="min-h-screen p-4 sm:p-8 bg-gray-100 font-sans">
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-                body { font-family: 'Inter', sans-serif; }
-            `}</style>
-            <div className="max-w-xl mx-auto">
-                <h1 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">
-                    Sentence Practice Tool
-                </h1>
-                <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
-                    {renderContent()}
-                </div>
-            </div>
-        </div>
-    );
-};
+        // --- Event Handlers ---
 
-export default App;
+        window.handleTopicChange = (event) => {
+            selectedTopic = event.target.value;
+            currentSentenceIndex = 0;
+            isCorrect = null;
+            typedText = '';
+            renderApp();
+        };
+
+        window.handleInput = (event) => {
+            typedText = event.target.value;
+            isCorrect = null; // Clear feedback on typing
+            
+            // Re-render only to update button disabled state
+            const checkBtn = document.querySelector('button:nth-of-type(1)');
+            if (checkBtn) {
+                const currentSentence = getFilteredSentences()[currentSentenceIndex];
+                checkBtn.disabled = !currentSentence || typedText.trim().length === 0;
+
+                // Re-render the feedback area to clear previous message
+                if (document.querySelector('.p-4.mt-4.rounded-xl')) {
+                    const tempTyped = typedText; // Save for restoration
+                    typedText = ''; // Temporarily clear to remove feedback
+                    renderApp(); 
+                    typedText = tempTyped; // Restore text, relies on not overwriting the textarea content
+                }
+            }
+        };
+
+        window.handleCheck = () => {
+            const currentSentence = getFilteredSentences()[currentSentenceIndex];
+            if (!currentSentence || typedText.trim() === '') return;
+
+            const requiredText = (currentSentence.text || '').trim().toLowerCase();
+            const userText = typedText.trim().toLowerCase();
+
+            isCorrect = (userText === requiredText);
+            renderApp();
+        };
+
+        window.handleNextSentence = () => {
+            const filtered = getFilteredSentences();
+            if (filtered.length === 0) return;
+
+            currentSentenceIndex = (currentSentenceIndex + 1) % filtered.length;
+            isCorrect = null;
+            typedText = '';
+            renderApp();
+            
+            // Focus the textarea immediately for a better flow
+            setTimeout(() => {
+                const textarea = document.getElementById('typed-text-area');
+                if(textarea) textarea.focus();
+            }, 50);
+        };
+
+
+        // --- Initialization ---
+
+        const initializeFirebase = async () => {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                const signInUser = async () => {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error('Firebase Auth Error:', error);
+                        userId = crypto.randomUUID();
+                    }
+                };
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                    } else if (!userId) {
+                        signInUser();
+                    }
+                    isAuthReady = true;
+                    // Start data subscription once auth is ready
+                    subscribeToSentences();
+                    document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
+                });
+
+            } catch (e) {
+                console.error('Failed to initialize Firebase:', e);
+                isAuthReady = true;
+                userId = crypto.randomUUID();
+                renderApp();
+            }
+        };
+
+        const subscribeToSentences = () => {
+            if (!db || !userId) return;
+
+            const sentencesPath = `artifacts/${appId}/users/${userId}/sentences`;
+            const q = query(collection(db, sentencesPath));
+
+            onSnapshot(q, (snapshot) => {
+                const fetchedSentences = [];
+                const uniqueTopics = new Set(['all']);
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // Must have 'text' field to be considered a valid sentence
+                    if (data.text) { 
+                        fetchedSentences.push({ id: doc.id, ...data });
+                        if (data.topic) {
+                            uniqueTopics.add(data.topic);
+                        }
+                    }
+                });
+
+                sentences = fetchedSentences;
+                topics = Array.from(uniqueTopics);
+                
+                // Reset practice context if the data changed
+                currentSentenceIndex = 0;
+                isCorrect = null;
+                typedText = '';
+
+                renderApp();
+                console.log(`[Firestore] Successfully loaded ${sentences.length} sentences.`);
+
+            }, (error) => {
+                console.error('[Firestore] Error fetching sentences:', error);
+                renderApp(); // Render failure state if needed
+            });
+        };
+
+        // Start the application
+        initializeFirebase();
+
+    </script>
+</body>
+</html>
