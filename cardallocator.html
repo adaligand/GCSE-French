@@ -333,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
                 selectedThemeDropdown.value = saved.selected;
+                // MODIFIED/FIXED: This call was missing, causing the bug.
                 colorCodeSelectedTheme(selectedThemeDropdown);
                 row.querySelector('.ra-result').innerHTML = saved.ra; 
                 row.querySelector('.rp-result').innerHTML = saved.rp; 
@@ -345,7 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addTableEventListeners();
     });
 
-    // MODIFIED/FIXED: Removed the destructive card-clearing logic.
     editConfigBtn.addEventListener('click', () => {
         document.querySelectorAll('#rp-config-grid select').forEach(s => s.disabled = false);
         lockConfigBtn.disabled = false;
@@ -407,7 +407,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
     }
 
-    // MODIFIED/FIXED: Added confirmation prompt before overwriting allocations.
     autoAllocateBtn.addEventListener('click', () => {
         if (allocationTableBody.querySelector('.ra-result span')) {
             if (!confirm("This will overwrite existing card allocations. Are you sure you want to continue?")) {
