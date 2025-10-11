@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initializeRpConfig() {
         const rpConfigGrid = document.getElementById('rp-config-grid');
-        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
+        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
     }
     
     function buildStateObject() {
