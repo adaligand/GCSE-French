@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Language Hub</title>
+  <title>Language Practice Hub</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -67,8 +67,9 @@
     button:hover { transform: translateY(-2px); }
     .btn-primary { background-color: #2980b9; color: #fff; }
     .btn-primary:hover { background-color: #3498db; }
+    /* This style is no longer used by the back buttons */
     .btn-secondary {
-      background-color: #6c757d; /* A more neutral secondary color */
+      background-color: #6c757d;
       color: white;
     }
     .btn-secondary:hover {
@@ -77,15 +78,14 @@
 
 
     /* --- PRACTICE --- */
-    /* MODIFIED: Updated to align all controls in a single row */
     .practice-controls {
       display: flex;
-      gap: 15px; /* Adjusted gap for a tighter look */
+      gap: 15px;
       margin-bottom: 25px;
-      align-items: flex-end; /* Vertically aligns buttons with the dropdown */
+      align-items: flex-end;
     }
     .practice-control-group {
-      flex-grow: 1; /* Allows the dropdown group to take available space */
+      flex-grow: 1;
       display: flex;
       flex-direction: column;
     }
@@ -97,7 +97,6 @@
       border: 1px solid #dddfe2;
       background-color: #f5f6f7;
     }
-    /* REMOVED .practice-button-container as it's no longer needed */
     #question-display {
       border: 1px solid #e0e0e0;
       border-radius: 12px;
@@ -184,13 +183,13 @@
       </div>
       <button id="generate-practice-btn" class="btn-primary">Generate Question</button>
       <button id="fullscreen-btn" class="btn-primary hide">🔈 Open Full Screen</button>
-      <button class="btn-secondary back-btn">Back to Main Menu</button>
+      <button class="btn-primary back-btn">Back to Main Menu</button>
     </div>
     <div id="question-display">
       <h2>Your question will appear here</h2>
       <p>Select a topic and click "Generate Question".</p>
     </div>
-    </div>
+  </div>
 
   <div id="vocab-section" class="hide">
     <div class="vocab-main-wrapper">
@@ -215,7 +214,7 @@
           <button id="vocab-reveal-btn" class="btn-primary">Reveal Answers</button>
           <button id="vocab-print-btn" class="btn-primary">🖨️ Print Test</button>
         </div>
-        <button class="btn-secondary back-btn">Back to Main Menu</button>
+        <button class="btn-primary back-btn">Back to Main Menu</button>
       </div>
     </div>
   </div>
@@ -304,37 +303,31 @@ async function initializeApp() {
 
         practice_allQuestions = practiceData.filter(q => q.Skill && q.Topic && q.Content);
 
-        // MODIFIED: Replaced the data processing logic with the one from your working code.
         vocab_vocabSets = {};
         let currentKey = null;
         let currentWords = [];
 
         vocabData.forEach(row => {
-            if (!row || row.length < 5) return; // Skip malformed rows
+            if (!row || row.length < 5) return;
 
             const theme = row[0]?.trim();
             const set = row[1]?.trim();
             const target = row[3]?.trim();
             const english = row[4]?.trim();
 
-            // A new set is defined when Column B (the set/topic) has a value.
             if (theme && set) {
-                // First, save the words from the PREVIOUS set before starting a new one.
                 if (currentKey && currentWords.length > 0) {
                     vocab_vocabSets[currentKey] = currentWords;
                 }
-                // Now, start the NEW set.
                 currentKey = `${theme}.${set}`;
-                currentWords = []; // Reset the word collector array
+                currentWords = [];
             }
 
-            // Add the current row's words (if they exist) to the current set.
             if (currentKey && target && english) {
                 currentWords.push({ target, english });
             }
         });
 
-        // After the loop, we must save the very last set that was being collected.
         if (currentKey && currentWords.length > 0) {
             vocab_vocabSets[currentKey] = currentWords;
         }
@@ -371,7 +364,6 @@ function practice_populateTopics() {
     });
 }
 
-// MODIFIED: This function now builds a clean, reliable URL to prevent access errors.
 function practice_generateQuestion() {
     const topic = practice_topicSelect.value;
     const type = currentPracticeTypeInput.value;
@@ -390,19 +382,16 @@ function practice_generateQuestion() {
     const originalUrl = q.Content;
 
     if (originalUrl && originalUrl.includes('google.com/presentation')) {
-        // Reliably extract the File ID and Slide ID using regular expressions
         const fileIdMatch = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
         const slideIdMatch = originalUrl.match(/#slide=id\.([a-zA-Z0-9_.-]+)/);
 
         if (fileIdMatch && slideIdMatch) {
             const fileId = fileIdMatch[1];
-            const slideId = `id.${slideIdMatch[1]}`; // Reconstruct the full slide ID
+            const slideId = `id.${slideIdMatch[1]}`;
 
-            // Build a perfect embed URL from scratch
             const embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
             contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
             
-            // Build a perfect present URL for the fullscreen button
             const presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
             
             fullscreenBtn.classList.remove('hide');
@@ -435,7 +424,6 @@ function vocab_initializeSelectors() {
     vocab_updateSetDropdown();
 }
 
-// MODIFIED: This function now correctly extracts topic names, even if they contain dots.
 function vocab_updateSetDropdown() {
     const theme = vocab_themeSelect.value;
     vocab_setSelect.innerHTML = '';
@@ -453,7 +441,6 @@ function vocab_updateSetDropdown() {
         const opt1 = document.createElement('option');
         opt1.value = setName;
         
-        // This is the corrected part. It finds the first '.' and takes the rest of the string.
         const topicName = setName.substring(setName.indexOf('.') + 1);
         
         opt1.textContent = `${topicName} (${vocab_vocabSets[setName].length} words)`;
@@ -461,6 +448,11 @@ function vocab_updateSetDropdown() {
         vocab_setSelect2.appendChild(opt1.cloneNode(true));
     });
 }
+
+vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
+vocab_generateBtn.addEventListener('click', vocab_generateTest);
+vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
+document.getElementById('vocab-print-btn').addEventListener('click', vocab_generatePrintVersion);
 
 function vocab_generateTest() {
     const set1 = vocab_setSelect.value;
