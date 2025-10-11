@@ -48,7 +48,7 @@
 <body>
 
     <div class="container">
-        <h1>GCSE Speaking Card Allocator 📋</h1>
+        <h1>📋 GCSE Speaking Card Allocator</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -84,7 +84,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
                 <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">Step 4: Set Themes & Allocate Cards</h2>
                 <div>
-                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE CARDS</button>
+                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE</button>
                     <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
                 </div>
             </div>
@@ -132,10 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.innerHTML = Object.entries(THEMES).map(([num, name]) => 
             `<label><input type="checkbox" class="studied-theme-checkbox" id="studied-theme-${num}" value="${num}">${name}</label>`
         ).join('');
-        // MODIFIED/FIXED: Add event listeners here
-        document.querySelectorAll('.studied-theme-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', handleStudiedThemeChange);
-        });
     }
 
     function initializeRpConfig() {
@@ -379,7 +375,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const savedStudent = oldData[s.examNumber];
             let choice1, choice2;
 
-            if (savedStudent) {
+            // MODIFIED/FIXED: Check if old choices are still valid
+            const choicesAreValid = savedStudent &&
+                                    studiedThemes.includes(savedStudent.choice1) &&
+                                    studiedThemes.includes(savedStudent.choice2);
+
+            if (choicesAreValid) {
                 choice1 = savedStudent.choice1;
                 choice2 = savedStudent.choice2;
             } else {
@@ -406,14 +407,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (saved) {
                 const selectedThemeDropdown = row.querySelector('.selected-theme');
                 updateSelectedThemeForRow(row);
-                selectedThemeDropdown.value = saved.selected;
+                
+                // Only restore selection if it's still a valid choice
+                const newChoice1 = row.cells[3].dataset.themeId;
+                const newChoice2 = row.cells[4].dataset.themeId;
+                if(saved.selected && (saved.selected === newChoice1 || saved.selected === newChoice2)) {
+                    selectedThemeDropdown.value = saved.selected;
+                }
                 colorCodeSelectedTheme(selectedThemeDropdown);
                 
                 const newTier = row.cells[1].textContent.trim().toUpperCase();
                 if (newTier === saved.tier.toUpperCase()) {
-                    row.querySelector('.ra-result').innerHTML = saved.ra; 
-                    row.querySelector('.rp-result').innerHTML = saved.rp; 
-                    row.querySelector('.photo-result').innerHTML = saved.pt;
+                    // Only restore cards if the selected theme was also restored
+                    if (selectedThemeDropdown.value) {
+                        row.querySelector('.ra-result').innerHTML = saved.ra; 
+                        row.querySelector('.rp-result').innerHTML = saved.rp; 
+                        row.querySelector('.photo-result').innerHTML = saved.pt;
+                    }
                 }
             } else {
                 updateSelectedThemeForRow(row);
@@ -492,62 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     row.querySelector('.photo-result').innerHTML = '';
                 }
             });
-        });
-    }
-
-    // ADDED: New function to handle dynamic theme choice updates
-    function handleStudiedThemeChange(event) {
-        if (allocationSection.style.display !== 'block') {
-            return; // Only run if the table is visible
-        }
-
-        if (!confirm("Updating studied themes will re-randomize choices for all students. This will clear any 'Selected Theme' that is no longer valid. Continue?")) {
-            event.target.checked = !event.target.checked; // Revert the checkbox change
-            return;
-        }
-
-        const studiedThemes = [];
-        document.querySelectorAll('.studied-theme-checkbox:checked').forEach(cb => studiedThemes.push(cb.value));
-
-        if (studiedThemes.length < 2) {
-            alert("You must have at least two themes selected.");
-            event.target.checked = !event.target.checked; // Revert
-            return;
-        }
-
-        const themePairs = [];
-        for (let i = 0; i < studiedThemes.length; i++) {
-            for (let j = i + 1; j < studiedThemes.length; j++) {
-                themePairs.push([studiedThemes[i], studiedThemes[j]]);
-            }
-        }
-        for (let i = themePairs.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [themePairs[i], themePairs[j]] = [themePairs[j], themePairs[i]];
-        }
-
-        allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
-            const selectedThemeDropdown = row.querySelector('.selected-theme');
-            const previousSelection = selectedThemeDropdown.value;
-            
-            const pair = themePairs[index % themePairs.length];
-            const [choice1, choice2] = Math.random() < 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
-
-            row.cells[3].dataset.themeId = choice1;
-            row.cells[3].textContent = THEMES[choice1];
-            row.cells[4].dataset.themeId = choice2;
-            row.cells[4].textContent = THEMES[choice2];
-
-            updateSelectedThemeForRow(row);
-
-            if (previousSelection && (previousSelection === choice1 || previousSelection === choice2)) {
-                selectedThemeDropdown.value = previousSelection;
-                colorCodeSelectedTheme(selectedThemeDropdown);
-            } else {
-                row.querySelector('.ra-result').innerHTML = '';
-                row.querySelector('.rp-result').innerHTML = '';
-                row.querySelector('.photo-result').innerHTML = '';
-            }
         });
     }
 
