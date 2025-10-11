@@ -224,99 +224,23 @@
 </div>
 
 <script>
+// --- URLs and Global Variables ---
 const practiceSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvNFlHDx-4cZbDzwKy5Yb_DKeSxS2wSXxyX1Ua6pGcf27yFjmqOPz9jQ_rzoV3-zoZI9lw4EIfmdXH/pub?output=csv";
 const vocabSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv";
+let practice_allQuestions = [];
+let vocab_vocabSets = {};
 
-// NAVIGATION
+// --- DOM Element References ---
 const mainMenu = document.getElementById('main-menu');
 const practiceSection = document.getElementById('practice-section');
 const vocabSection = document.getElementById('vocab-section');
+const readingBtn = document.getElementById('reading-btn');
+const listeningBtn = document.getElementById('listening-btn');
+const vocabBtn = document.getElementById('vocab-btn');
 const currentPracticeTypeInput = document.getElementById('current-practice-type');
-
-document.getElementById('reading-btn').addEventListener('click', () => showPractice('Reading'));
-document.getElementById('listening-btn').addEventListener('click', () => showPractice('Listening'));
-document.getElementById('vocab-btn').addEventListener('click', showVocabTest);
-document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
-
-function showMainMenu() {
-  mainMenu.classList.remove('hide');
-  practiceSection.classList.add('hide');
-  vocabSection.classList.add('hide');
-}
-function showPractice(type) {
-  mainMenu.classList.add('hide');
-  practiceSection.classList.remove('hide');
-  vocabSection.classList.add('hide');
-  document.getElementById('practice-title').textContent = `${type} Practice`;
-  currentPracticeTypeInput.value = type;
-  practice_populateTopics();
-}
-function showVocabTest() {
-  mainMenu.classList.add('hide');
-  practiceSection.classList.add('hide');
-  vocabSection.classList.remove('hide');
-  vocab_initializeSelectors();
-}
-
-// PRACTICE SECTION
-let practice_allQuestions = [];
 const practice_topicSelect = document.getElementById('topic-select');
 const practice_generateBtn = document.getElementById('generate-practice-btn');
 const practice_questionDisplay = document.getElementById('question-display');
-
-practice_generateBtn.addEventListener('click', practice_generateQuestion);
-
-function loadPracticeData() {
-  Papa.parse(practiceSheetUrl, {
-    download: true, header: true, skipEmptyLines: true,
-    complete: (results) => {
-      practice_allQuestions = results.data.filter(q => q.Skill && q.Topic && q.Content);
-    },
-    error: () => practice_questionDisplay.innerHTML = `<p>Error loading practice data.</p>`
-  });
-}
-
-function practice_populateTopics() {
-  const selectedType = currentPracticeTypeInput.value;
-  const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
-  practice_topicSelect.innerHTML = '';
-  if (topics.length === 0) {
-    practice_topicSelect.innerHTML = `<option>No Topics Available</option>`;
-    return;
-  }
-  topics.sort().forEach(topic => {
-    const opt = document.createElement('option');
-    opt.value = topic;
-    opt.textContent = topic;
-    practice_topicSelect.appendChild(opt);
-  });
-}
-
-function practice_generateQuestion() {
-  const topic = practice_topicSelect.value;
-  const type = currentPracticeTypeInput.value;
-  const questions = practice_allQuestions.filter(q => q.Skill === type && q.Topic === topic);
-  if (questions.length === 0) {
-    practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
-    return;
-  }
-  const q = questions[Math.floor(Math.random() * questions.length)];
-  let content = q.Content;
-
-  if (content.includes('google.com/presentation')) {
-    const fileId = content.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
-    if (fileId) {
-      content = `
-        <iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false" allowfullscreen></iframe>
-        <button onclick="window.open('https://docs.google.com/presentation/d/${fileId}/present','_blank')" class="btn-primary" style="margin-top:15px;">🔈 Open Full Screen</button>
-      `;
-    }
-  }
-  practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${content}`;
-}
-
-// VOCAB SECTION
-let vocab_vocabSets = {};
 const vocab_themeSelect = document.getElementById('vocab-theme-select');
 const vocab_setSelect = document.getElementById('vocab-set-select');
 const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
@@ -327,117 +251,237 @@ const vocab_testControls = document.getElementById('vocab-test-controls');
 const vocab_revealBtn = document.getElementById('vocab-reveal-btn');
 const vocab_printArea = document.getElementById('vocab-print-area');
 
-const vocab_themeMap = {
-  '1': '1-Personal world',
-  '2': '2-Lifestyle',
-  '3': '3-Neighbourhood',
-  '4': '4-Media & Tech',
-  '5': '5-Study & future',
-  '6': '6-Travel and Tourism'
-};
+// --- Navigation ---
+readingBtn.addEventListener('click', () => showPractice('Reading'));
+listeningBtn.addEventListener('click', () => showPractice('Listening'));
+vocabBtn.addEventListener('click', showVocabTest);
+document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
 
-function loadVocabData() {
-  Papa.parse(vocabSheetUrl, {
-    download: true, header: false, skipEmptyLines: true,
-    complete: (results) => {
-      vocab_vocabSets = {};
-      results.data.forEach(row => {
-        const theme = row[0]?.trim();
-        const set = row[1]?.trim();
-        const target = row[3]?.trim();
-        const english = row[4]?.trim();
-        if (theme && set && target && english) {
-          const key = `${theme}.${set}`;
-          if (!vocab_vocabSets[key]) vocab_vocabSets[key] = [];
-          vocab_vocabSets[key].push({ target, english });
-        }
-      });
-      vocab_initializeSelectors();
-    },
-    error: () => alert("Error loading vocab data.")
-  });
+function showMainMenu() {
+    mainMenu.classList.remove('hide');
+    practiceSection.classList.add('hide');
+    vocabSection.classList.add('hide');
 }
 
+function showPractice(type) {
+    mainMenu.classList.add('hide');
+    practiceSection.classList.remove('hide');
+    vocabSection.classList.add('hide');
+    document.getElementById('practice-title').textContent = `${type} Practice`;
+    currentPracticeTypeInput.value = type;
+    practice_populateTopics(); // Now this will work because data is pre-loaded
+}
+
+function showVocabTest() {
+    mainMenu.classList.add('hide');
+    practiceSection.classList.add('hide');
+    vocabSection.classList.remove('hide');
+}
+
+// --- Data Loading ---
+// ** CHANGED **: Wrap PapaParse in a Promise for better control
+function loadData(url, options) {
+    return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+            ...options,
+            download: true,
+            skipEmptyLines: true,
+            complete: (results) => resolve(results.data),
+            error: (err) => reject(err),
+        });
+    });
+}
+
+// ** CHANGED **: Central function to load all data and initialize the app
+async function initializeApp() {
+    // Disable buttons to prevent clicks while data is loading
+    readingBtn.disabled = true;
+    listeningBtn.disabled = true;
+    vocabBtn.disabled = true;
+    readingBtn.textContent = 'Loading...';
+
+    try {
+        // Load both sheets at the same time
+        const [practiceData, vocabData] = await Promise.all([
+            loadData(practiceSheetUrl, { header: true }),
+            loadData(vocabSheetUrl, { header: false })
+        ]);
+
+        // Process Practice Data
+        practice_allQuestions = practiceData.filter(q => q.Skill && q.Topic && q.Content);
+
+        // Process Vocab Data
+        vocabData.forEach(row => {
+            const theme = row[0]?.trim();
+            const set = row[1]?.trim();
+            const target = row[3]?.trim();
+            const english = row[4]?.trim();
+            if (theme && set && target && english) {
+                const key = `${theme}.${set}`;
+                if (!vocab_vocabSets[key]) vocab_vocabSets[key] = [];
+                vocab_vocabSets[key].push({ target, english });
+            }
+        });
+
+        // ** NEW **: Populate dropdowns AFTER data is loaded
+        vocab_initializeSelectors();
+
+        // Re-enable buttons
+        readingBtn.disabled = false;
+        listeningBtn.disabled = false;
+        vocabBtn.disabled = false;
+        readingBtn.textContent = 'Reading Practice';
+
+    } catch (error) {
+        console.error("Failed to load spreadsheet data:", error);
+        document.querySelector('.container').innerHTML = '<h1>Error</h1><p>Could not load data from the spreadsheets. Please check the URLs and make sure the sheets are published correctly.</p>';
+    }
+}
+
+// --- Practice Section Logic ---
+practice_generateBtn.addEventListener('click', practice_generateQuestion);
+
+function practice_populateTopics() {
+    const selectedType = currentPracticeTypeInput.value;
+    const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
+    practice_topicSelect.innerHTML = '';
+    if (topics.length === 0) {
+        practice_topicSelect.innerHTML = `<option>No Topics Available</option>`;
+        return;
+    }
+    topics.sort().forEach(topic => {
+        const opt = document.createElement('option');
+        opt.value = topic;
+        opt.textContent = topic;
+        practice_topicSelect.appendChild(opt);
+    });
+}
+
+function practice_generateQuestion() {
+    const topic = practice_topicSelect.value;
+    const type = currentPracticeTypeInput.value;
+    const questions = practice_allQuestions.filter(q => q.Skill === type && q.Topic === topic);
+    if (questions.length === 0) {
+        practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
+        return;
+    }
+    const q = questions[Math.floor(Math.random() * questions.length)];
+    let content = q.Content;
+    if (content.includes('google.com/presentation')) {
+        const fileId = content.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+        if (fileId) {
+            content = `
+                <iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false" allowfullscreen></iframe>
+                <button onclick="window.open('https://docs.google.com/presentation/d/${fileId}/present','_blank')" class="btn-primary" style="margin-top:15px;">🔈 Open Full Screen</button>
+            `;
+        }
+    }
+    practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${content}`;
+}
+
+
+// --- Vocabulary Section Logic ---
+const vocab_themeMap = {
+    '1': '1-Personal world',
+    '2': '2-Lifestyle',
+    '3': '3-Neighbourhood',
+    '4': '4-Media & Tech',
+    '5': '5-Study & future',
+    '6': '6-Travel and Tourism'
+};
+
 function vocab_initializeSelectors() {
-  const themes = [...new Set(Object.keys(vocab_vocabSets).map(k => k.split('.')[0]))];
-  vocab_themeSelect.innerHTML = '';
-  themes.forEach(theme => {
-    const opt = document.createElement('option');
-    opt.value = theme;
-    opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`;
-    vocab_themeSelect.appendChild(opt);
-  });
-  vocab_updateSetDropdown();
+    const themes = [...new Set(Object.keys(vocab_vocabSets).map(k => k.split('.')[0]))];
+    vocab_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>'; // Add a default option
+    themes.sort().forEach(theme => {
+        const opt = document.createElement('option');
+        opt.value = theme;
+        opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`;
+        vocab_themeSelect.appendChild(opt);
+    });
+    vocab_updateSetDropdown(); // Initialize with empty sets
 }
 
 function vocab_updateSetDropdown() {
-  const theme = vocab_themeSelect.value;
-  vocab_setSelect.innerHTML = '';
-  vocab_setSelect2.innerHTML = '';
-  const none = document.createElement('option');
-  none.value = '';
-  none.textContent = '-- None --';
-  vocab_setSelect2.appendChild(none);
+    const theme = vocab_themeSelect.value;
+    vocab_setSelect.innerHTML = '';
+    vocab_setSelect2.innerHTML = '';
+    
+    // Add a default "None" option for the second dropdown
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '-- None --';
+    vocab_setSelect2.appendChild(none);
 
-  const sets = Object.keys(vocab_vocabSets).filter(k => k.startsWith(theme + '.'));
-  sets.forEach(setName => {
-    const opt1 = document.createElement('option');
-    opt1.value = setName;
-    opt1.textContent = `${setName} (${vocab_vocabSets[setName].length} words)`;
-    vocab_setSelect.appendChild(opt1);
-    vocab_setSelect2.appendChild(opt1.cloneNode(true));
-  });
+    if (!theme) return; // If no theme is selected, stop here
+
+    const sets = [...new Set(Object.keys(vocab_vocabSets).filter(k => k.startsWith(theme + '.')).map(k => k))];
+    sets.sort().forEach(setName => {
+        const opt1 = document.createElement('option');
+        opt1.value = setName;
+        opt1.textContent = `${setName.split('.')[1]} (${vocab_vocabSets[setName].length} words)`;
+        vocab_setSelect.appendChild(opt1);
+        vocab_setSelect2.appendChild(opt1.cloneNode(true));
+    });
 }
 
 vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
 vocab_generateBtn.addEventListener('click', vocab_generateTest);
 vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
+document.getElementById('vocab-print-btn').addEventListener('click', vocab_generatePrintVersion);
 
 function vocab_generateTest() {
-  const set1 = vocab_setSelect.value;
-  const set2 = vocab_setSelect2.value;
-  if (!set1) return;
-  let combined = [...vocab_vocabSets[set1]];
-  if (set2 && set2 !== '') combined = combined.concat(vocab_vocabSets[set2]);
-  combined = Array.from(new Map(combined.map(i => [i.target, i])).values());
-  if (combined.length === 0) return;
+    const set1 = vocab_setSelect.value;
+    if (!set1) return;
 
-  const shuffled = combined.sort(() => 0.5 - Math.random());
-  vocab_testBody.innerHTML = '';
-  shuffled.forEach((item, i) => {
-    const row = vocab_testBody.insertRow();
-    row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
-  });
-  vocab_testContainer.classList.remove('hide');
-  vocab_testControls.classList.remove('hide');
-  vocab_printArea.classList.add('hide');
+    let combined = [...vocab_vocabSets[set1]];
+    const set2 = vocab_setSelect2.value;
+    if (set2) {
+        combined = combined.concat(vocab_vocabSets[set2]);
+    }
+    
+    combined = Array.from(new Map(combined.map(item => [item.target, item])).values()); // Remove duplicates
+    if (combined.length === 0) return;
+
+    const shuffled = combined.sort(() => 0.5 - Math.random());
+    vocab_testBody.innerHTML = '';
+    shuffled.forEach((item, i) => {
+        const row = vocab_testBody.insertRow();
+        row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
+    });
+    vocab_testContainer.classList.remove('hide');
+    vocab_testControls.classList.remove('hide');
+    vocab_printArea.classList.add('hide');
 }
 
 function vocab_revealAnswers() {
-  document.querySelectorAll('#vocab-test-container .answer-cell span').forEach(s => s.classList.toggle('visible'));
+    document.querySelectorAll('#vocab-test-container .answer-cell span').forEach(s => s.classList.toggle('visible'));
 }
 
 function vocab_generatePrintVersion() {
-  const set1 = vocab_setSelect.value;
-  const set2 = vocab_setSelect2.value;
-  let combined = [...vocab_vocabSets[set1]];
-  if (set2 && set2 !== '') combined = combined.concat(vocab_vocabSets[set2]);
-  const shuffled = combined.sort(() => 0.5 - Math.random());
-  vocab_printArea.innerHTML = `
+    const set1 = vocab_setSelect.value;
+    if (!set1) return;
+    
+    let combined = [...vocab_vocabSets[set1]];
+    const set2 = vocab_setSelect2.value;
+    if (set2) {
+      combined = combined.concat(vocab_vocabSets[set2]);
+    }
+
+    const shuffled = combined.sort(() => 0.5 - Math.random());
+    vocab_printArea.innerHTML = `
     <div class='print-table-wrapper'>
-      <table><thead><tr><th>No.</th><th>Target</th><th>English</th></tr></thead>
-      <tbody>${shuffled.map((i, n) => `<tr><td>${n+1}</td><td>${i.target}</td><td>${i.english}</td></tr>`).join('')}</tbody></table>
+        <table><thead><tr><th>No.</th><th>Target</th><th>English</th></tr></thead>
+        <tbody>${shuffled.map((i, n) => `<tr><td>${n+1}</td><td>${i.target}</td><td>${i.english}</td></tr>`).join('')}</tbody></table>
     </div>
-  `;
-  vocab_printArea.classList.remove('hide');
-  window.print();
+    `;
+    vocab_printArea.classList.remove('hide');
+    window.print();
 }
 
-document.getElementById('vocab-print-btn').addEventListener('click', vocab_generatePrintVersion);
+// --- Start the App ---
+initializeApp();
 
-// LOAD DATA INITIALLY
-loadPracticeData();
-loadVocabData();
 </script>
 </body>
 </html>
