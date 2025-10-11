@@ -31,6 +31,8 @@
         .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
         .setup-action-btn { background-color: #e9ecef; color: #212529; font-weight: bold; }
         .setup-action-btn:hover { background-color: #ced4da; }
+        .shuffle-btn { background-color: #5856d6; margin-left: 10px; } /* ADDED */
+        .shuffle-btn:hover { background-color: #4c4aa8; } /* ADDED */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
         th { background-color: #005a9c; color: white; }
@@ -48,7 +50,7 @@
 <body>
 
     <div class="container">
-        <h1>📋 GCSE Speaking Card Allocator</h1>
+        <h1>GCSE Speaking Card Allocator 📋</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -84,7 +86,8 @@
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
                 <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">Step 4: Set Themes & Allocate Cards</h2>
                 <div>
-                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE</button>
+                    <button id="shuffle-choices-btn" class="shuffle-btn">🎲 Shuffle Choices</button>
+                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE CARDS</button>
                     <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
                 </div>
             </div>
@@ -122,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveToFileBtn = document.getElementById('save-to-file-btn'); 
     const loadFromFileInput = document.getElementById('load-from-file-input'); 
     const studentNamesInput = document.getElementById('student-names-input');
-    // ADDED: Bottom button variables
+    const shuffleChoicesBtn = document.getElementById('shuffle-choices-btn'); // RESTORED
     const saveToFileBtnBottom = document.getElementById('save-to-file-btn-bottom');
     const exportExcelBtnBottom = document.getElementById('export-excel-btn-bottom');
     
@@ -382,7 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const savedStudent = oldData[s.examNumber];
             let choice1, choice2;
 
-            if (savedStudent) {
+            const choicesAreValid = savedStudent &&
+                                    studiedThemes.includes(savedStudent.choice1) &&
+                                    studiedThemes.includes(savedStudent.choice2);
+
+            if (choicesAreValid) {
                 choice1 = savedStudent.choice1;
                 choice2 = savedStudent.choice2;
             } else {
@@ -409,11 +416,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (saved) {
                 const selectedThemeDropdown = row.querySelector('.selected-theme');
                 updateSelectedThemeForRow(row);
-                selectedThemeDropdown.value = saved.selected;
+                
+                const newChoice1 = row.cells[3].dataset.themeId;
+                const newChoice2 = row.cells[4].dataset.themeId;
+                if(saved.selected && (saved.selected === newChoice1 || saved.selected === newChoice2)) {
+                    selectedThemeDropdown.value = saved.selected;
+                }
                 colorCodeSelectedTheme(selectedThemeDropdown);
                 
                 const newTier = row.cells[1].textContent.trim().toUpperCase();
-                if (newTier === saved.tier.toUpperCase()) {
+                if (newTier === saved.tier.toUpperCase() && selectedThemeDropdown.value) {
                     row.querySelector('.ra-result').innerHTML = saved.ra; 
                     row.querySelector('.rp-result').innerHTML = saved.rp; 
                     row.querySelector('.photo-result').innerHTML = saved.pt;
@@ -598,6 +610,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // RESTORED: Shuffle logic
+    shuffleChoicesBtn.addEventListener('click', () => {
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const choice1Cell = row.cells[3];
+            const choice2Cell = row.cells[4];
+            const selectedDropdown = row.querySelector('.selected-theme');
+            const previousSelection = selectedDropdown.value;
+
+            const tempId = choice1Cell.dataset.themeId;
+            choice1Cell.dataset.themeId = choice2Cell.dataset.themeId;
+            choice2Cell.dataset.themeId = tempId;
+
+            choice1Cell.textContent = THEMES[choice1Cell.dataset.themeId];
+            choice2Cell.textContent = THEMES[choice2Cell.dataset.themeId];
+            
+            updateSelectedThemeForRow(row);
+
+            if (previousSelection && (previousSelection === choice1Cell.dataset.themeId || previousSelection === choice2Cell.dataset.themeId)) {
+                selectedDropdown.value = previousSelection;
+            } else {
+                selectedDropdown.value = '';
+                row.querySelector('.ra-result').innerHTML = '';
+                row.querySelector('.rp-result').innerHTML = '';
+                row.querySelector('.photo-result').innerHTML = '';
+            }
+            colorCodeSelectedTheme(selectedDropdown);
+        });
+    });
+
     exportExcelBtn.addEventListener('click', exportToExcel);
     saveToFileBtn.addEventListener('click', saveAllocationToFile);
     loadFromFileInput.addEventListener('change', loadAllocationFromFile);
@@ -616,9 +657,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Event listeners
-    saveToFileBtnBottom.addEventListener('click', saveAllocationToFile); // ADDED
-    exportExcelBtnBottom.addEventListener('click', exportToExcel); // ADDED
+    // RESTORED: Add event listeners to bottom buttons
+    saveToFileBtnBottom.addEventListener('click', saveAllocationToFile);
+    exportExcelBtnBottom.addEventListener('click', exportToExcel);
 
     initializeStudiedThemes();
     initializeRpConfig();
