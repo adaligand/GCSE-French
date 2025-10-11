@@ -14,24 +14,8 @@
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        /* MODIFIED/FIXED: Added more robust CSS reset properties to ensure perfect alignment */
         button, .action-btn-label {
-            display: inline-block;
-            padding: 12px 20px;
-            margin: 0;
-            font-family: inherit;
-            font-size: 1rem;
-            font-weight: bold;
-            line-height: 1.5;
-            color: #fff;
-            background-color: #007bff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-align: center;
-            vertical-align: middle;
-            transition: background-color 0.2s;
-            box-sizing: border-box;
+            display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; line-height: 1.5; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; text-align: center; vertical-align: middle; transition: background-color 0.2s; box-sizing: border-box;
         }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
         .action-btn { background-color: #28a745; }
@@ -80,8 +64,8 @@
             <div class="section" id="student-import-section">
                 <h2>Step 2: Import Students</h2>
                 <div id="student-entry-wrapper">
-                    <p>Paste from a spreadsheet (four columns: Exam Number, Tier, First Name, Last Name).</p>
-                    <textarea id="student-names-input" placeholder="Paste data here..."></textarea>
+                    <p>Paste from a spreadsheet or type, using Tab to separate columns (Exam Number, Tier, First Name, Last Name).</p>
+                    <textarea id="student-names-input" placeholder="Paste or type data here..."></textarea>
                     <button id="create-table-btn" class="setup-action-btn" style="margin-top: 10px;">Create Allocation Table</button>
                 </div>
             </div>
@@ -125,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportExcelBtn = document.getElementById('export-excel-btn'); 
     const saveToFileBtn = document.getElementById('save-to-file-btn'); 
     const loadFromFileInput = document.getElementById('load-from-file-input'); 
+    const studentNamesInput = document.getElementById('student-names-input');
     
     const initialSetupWrapper = document.getElementById('initial-setup-wrapper');
     const allocationSection = document.getElementById('allocation-section');
@@ -164,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function populatePageFromState(state) {
         if (!state) return;
         allocationTableBody.innerHTML = '';
-        document.getElementById('student-names-input').value = '';
+        studentNamesInput.value = '';
         allocationSection.style.display = 'none';
         initialSetupWrapper.style.display = 'grid';
 
@@ -175,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (state.students && state.students.length > 0) {
-            document.getElementById('student-names-input').value = state.students.map(s => `${s.examNumber}\t${s.tier}\t${s.name}`).join('\n');
+            studentNamesInput.value = state.students.map(s => `${s.examNumber}\t${s.tier}\t${s.name}`).join('\n');
             createTableBtn.click();
             allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
                 const s = state.students[index];
@@ -309,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        const lines = document.getElementById('student-names-input').value.trim().split('\n');
+        const lines = studentNamesInput.value.trim().split('\n');
         const studentData = lines.map(line => {
             const parts = line.split('\t');
             const examNumber = (parts[0] || '').trim();
@@ -343,8 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const examNumber = row.cells[0].textContent.trim();
             const saved = oldData[examNumber];
             if (saved) {
-                row.cells[1].textContent = saved.tier;
-                row.cells[2].textContent = saved.name;
+                // MODIFIED/FIXED: Removed the lines that overwrote user edits.
+                // The new name and tier from the textarea are now preserved.
                 row.querySelector('.theme-choice-1').value = saved.choice1; 
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
@@ -376,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = row.cells[2].textContent.trim();
             return `${examNumber}\t${tier}\t${name}`;
         }).join('\n');
-        document.getElementById('student-names-input').value = currentData;
+        studentNamesInput.value = currentData;
         createTableBtn.textContent = 'Update Allocation Table';
         allocationSection.style.display = 'none';
         initialSetupWrapper.style.display = 'grid';
@@ -476,7 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Event Listeners
     exportExcelBtn.addEventListener('click', exportToExcel);
     saveToFileBtn.addEventListener('click', saveAllocationToFile);
     loadFromFileInput.addEventListener('change', loadAllocationFromFile);
@@ -485,8 +469,16 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.reload();
         }
     });
+    studentNamesInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 1;
+        }
+    });
 
-    // Initial page load
     initializeRpConfig();
 });
 </script>
