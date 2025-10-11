@@ -335,68 +335,28 @@
         }
     }
 
-    function practice_generateQuestion() {
-        const selectedType = currentPracticeTypeInput.value;
-        const selectedTopic = practice_topicSelect.value;
-        
-        const relevantQuestions = practice_allQuestions.filter(q => 
-            q.Skill === selectedType && q.Topic === selectedTopic
-        );
+   if (contentLink.includes('google.com/presentation')) {
+    const fileId = contentLink.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+    const slideId = contentLink.match(/slide=id\.p[a-zA-Z0-9]*/)?.[0]?.split('=')[1];
 
-        if (relevantQuestions.length === 0) {
-            practice_questionDisplay.innerHTML = '<h2>No Questions Found</h2><p>No questions matched your selection. Try a different topic or check your spreadsheet data.</p>';
-            return;
+    if (fileId) {
+        let embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false`;
+        let fullUrl = `https://docs.google.com/presentation/d/${fileId}/present`;
+
+        if (slideId) {
+            embedUrl += `&slide=${slideId}`;
+            fullUrl += `?slide=${slideId}`;
         }
 
-        const randomQuestion = relevantQuestions[Math.floor(Math.random() * relevantQuestions.length)];
-        const contentLink = randomQuestion.Content; 
-        
-        let contentHTML = '';
-
-        // FIX: Robust Google Slides embedding
-        if (contentLink && contentLink.toLowerCase().includes('google.com/presentation')) {
-            
-            // Regex to extract the FILE ID (e.g., 1HtuTfE4-pW24d6RdK-qVz9zDfnkNXyleL9sKWrQefEk)
-            const fileIdMatch = contentLink.match(/d\/([a-zA-Z0-9_-]+)/);
-            
-            // Regex to extract the specific SLIDE ID (e.g., id.p2)
-            const slideIdMatch = contentLink.match(/slide=(id\.[a-zA-Z0-9]+)/);
-            
-            if (fileIdMatch) {
-                const fileId = fileIdMatch[1];
-                let embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&delayms=3000`;
-
-                if (slideIdMatch) {
-                    const slideId = slideIdMatch[1];
-                    // Append the slide ID parameter to force it to that specific slide
-                    embedUrl += `&${slideId}`; 
-                }
-
-                // Use an iframe to embed the slide
-                contentHTML = `
-                    <iframe 
-                        src="${embedUrl}" 
-                        style="width:100%; height:500px; border:none; background:#f0f0f0;" 
-                        allowfullscreen="true" 
-                        mozallowfullscreen="true" 
-                        webkitallowfullscreen="true">
-                    </iframe>
-                `;
-            } else {
-                 // Fallback if the link is a slides link but the ID couldn't be parsed
-                 contentHTML = `<div class="content">Error parsing Google Slides link: ${contentLink}</div>`;
-            }
-
-        } else {
-            // Display as regular content (for reading practice or plain text)
-            contentHTML = `<div class="content">${contentLink}</div>`;
-        }
-
-        practice_questionDisplay.innerHTML = `
-            <h2>${randomQuestion.Title || 'Question'}</h2>
-            ${contentHTML}
+        contentHTML = `
+            <iframe src="${embedUrl}" allowfullscreen style="width:100%;height:500px;border:none;"></iframe>
+            <button onclick="window.open('${fullUrl}','_blank')" style="margin-top:10px;padding:10px 20px;font-size:1em;background:#27ae60;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔈 Open Full Screen</button>
         `;
+    } else {
+        contentHTML = `<div class="content">Invalid Google Slides link.</div>`;
     }
+}
+
 
     // --- VOCABULARY TEST LOGIC ---
     const vocab_themeSelect = document.getElementById('vocab-theme-select');
@@ -414,36 +374,27 @@
     const vocab_themeMap = { '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood', '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism' };
 
     function loadVocabData() {
-        Papa.parse(vocabSheetUrl, {
-            download: true, header: false, skipEmptyLines: true,
-            complete: (results) => {
-                let currentSetName = null, currentSetWords = [];
-                results.data.forEach(row => {
-                    const setNameInRow = row[0] ? row[0].trim() : '';
-                    const targetWord = row[2] ? row[2].trim() : '';
-                    const englishWord = row[3] ? row[3].trim() : '';
-                    
-                    if (setNameInRow !== '') {
-                        if (currentSetName && currentSetWords.length > 0) vocab_vocabSets[currentSetName] = currentSetWords;
-                        currentSetName = setNameInRow;
-                        currentSetWords = [];
-                    }
-                    if (targetWord !== '' && englishWord !== '') {
-                        currentSetWords.push({ target: targetWord, english: englishWord });
-                    }
-                });
-                if (currentSetName && currentSetWords.length > 0) vocab_vocabSets[currentSetName] = currentSetWords;
-                if (Object.keys(vocab_vocabSets).length > 0) {
-                    vocab_initializeSelectors();
-                }
-            }
-        });
-    }
+    Papa.parse(vocabSheetUrl, {
+        download: true, header: false, skipEmptyLines: true,
+        complete: (results) => {
+            vocab_vocabSets = {};
+            results.data.forEach(row => {
+                const theme = row[0]?.trim() || '';
+                const set = row[1]?.trim() || '';
+                const target = row[3]?.trim() || '';
+                const english = row[4]?.trim() || '';
 
-    vocab_generateBtn.addEventListener('click', vocab_generateTest);
-    vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
-    vocab_printBtn.addEventListener('click', () => window.print());
-    vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
+                if (theme && set && target && english) {
+                    const key = `${theme}.${set}`;
+                    if (!vocab_vocabSets[key]) vocab_vocabSets[key] = [];
+                    vocab_vocabSets[key].push({ target, english });
+                }
+            });
+            if (Object.keys(vocab_vocabSets).length > 0) vocab_initializeSelectors();
+        }
+    });
+}
+
     
     function vocab_initializeSelectors() {
         const themes = [...new Set(Object.keys(vocab_vocabSets).map(setName => setName.split('.')[0]))];
