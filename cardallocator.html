@@ -47,7 +47,13 @@
         .rp-config-item label { display: inline-block; margin-bottom: 0; flex-shrink: 0; }
         .rp-config-item select { width: auto; flex-grow: 1; }
         .rp-config-container { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .exclude-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px 40px; }
+        .exclude-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-auto-flow: column;
+    gap: 10px 40px;
+}
         .exclude-column { display: flex; flex-direction: column; gap: 15px; }
         .exclude-item { display: flex; align-items: center; gap: 10px; }
         .exclude-item label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0;}
@@ -81,22 +87,18 @@
             </div>
             
             <div class="section" id="exclude-cards-section">
-                <h2>3: Exclude Cards</h2>
-                <p>Optional : Enter cards to exclude, separated by commas (e.g., 1, 5, 9).</p>
-                <div class="exclude-grid">
-                    <div class="exclude-column">
-                        <div class="exclude-item"><label for="exclude-ra-f-input">FRA</label><input type="text" id="exclude-ra-f-input" placeholder="e.g., 2, 6"></div>
-                        <div class="exclude-item"><label for="exclude-rp-f-input">FRP</label><input type="text" id="exclude-rp-f-input" placeholder="e.g., 1, 4"></div>
-                        <div class="exclude-item"><label for="exclude-pt-f-input">FPT</label><input type="text" id="exclude-pt-f-input" placeholder="e.g., 3, 8"></div>
-                    </div>
-                    <div class="exclude-column">
-                        <div class="exclude-item"><label for="exclude-ra-h-input">HRA</label><input type="text" id="exclude-ra-h-input" placeholder="e.g., 2, 6"></div>
-                        <div class="exclude-item"><label for="exclude-rp-h-input">HRP</label><input type="text" id="exclude-rp-h-input" placeholder="e.g., 1, 4"></div>
-                        <div class="exclude-item"><label for="exclude-pt-h-input">HPT</label><input type="text" id="exclude-pt-h-input" placeholder="e.g., 3, 8"></div>
-                    </div>
-                </div>
-            </div>
 
+    <h2>3: Exclude Cards</h2>
+    <p>Optional : Enter cards to exclude, separated by commas (e.g., 1, 5, 9).</p>
+    <div class="exclude-grid">
+        <div class="exclude-item"><label for="exclude-ra-f-input">FRA</label><input type="text" id="exclude-ra-f-input" placeholder="e.g., 2, 6"></div>
+        <div class="exclude-item"><label for="exclude-rp-f-input">FRP</label><input type="text" id="exclude-rp-f-input" placeholder="e.g., 1, 4"></div>
+        <div class="exclude-item"><label for="exclude-pt-f-input">FPT</label><input type="text" id="exclude-pt-f-input" placeholder="e.g., 3, 8"></div>
+        <div class="exclude-item"><label for="exclude-ra-h-input">HRA</label><input type="text" id="exclude-ra-h-input" placeholder="e.g., 2, 6"></div>
+        <div class="exclude-item"><label for="exclude-rp-h-input">HRP</label><input type="text" id="exclude-rp-h-input" placeholder="e.g., 1, 4"></div>
+        <div class="exclude-item"><label for="exclude-pt-h-input">HPT</label><input type="text" id="exclude-pt-h-input" placeholder="e.g., 3, 8"></div>
+    </div>
+  </div>
             <div class="section" id="student-import-section">
                 <h2>4: Import Students</h2>
                 <div id="student-entry-wrapper">
