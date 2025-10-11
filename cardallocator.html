@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Speaking Card Allocator</title>
+    <title>GCSE Speaking Exam Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -14,7 +14,6 @@
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        /* MODIFIED: Added display and vertical-align for consistent height */
         button, .action-btn-label { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; box-sizing: border-box; display: inline-block; vertical-align: middle; }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
         .action-btn { background-color: #28a745; }
@@ -33,7 +32,7 @@
         th { background-color: #005a9c; color: white; }
         tr:nth-child(even) { background-color: #f2f2f2; }
         .controls { display: flex; align-items: center; flex-wrap: wrap; }
-        .student-name[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
+        .student-name[contenteditable]:focus, .exam-number[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
         .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
         .theme-color-1 { background-color: #aed6f1; } /* Light Blue */
         .theme-color-2 { background-color: #a2d9ab; } /* Light Green */
@@ -46,7 +45,7 @@
 <body>
 
     <div class="container">
-        <h1>GCSE Speaking Card Allocator 📋</h1>
+        <h1>GCSE Speaking Exam Allocator 📋</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -68,7 +67,7 @@
             <div class="section" id="student-import-section">
                 <h2>Step 2: Import Students</h2>
                 <div id="student-entry-wrapper">
-                    <p>Paste from a spreadsheet (two columns: Exam Number and Student Name).</p>
+                    <p>Paste from a spreadsheet (three columns: Exam Code, First Name, Last Name).</p>
                     <textarea id="student-names-input" placeholder="Paste data here..."></textarea>
                     <button id="create-table-btn" class="setup-action-btn" style="margin-top: 10px;">Create Allocation Table</button>
                 </div>
@@ -103,7 +102,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const THEMES = { 1: "Personal world", 2: "Lifestyle", 3: "Neighbourhood", 4: "Media & Tech", 5: "Study & future", 6: "Travel and Tourism" };
 
-    // DOM Elements
     const lockConfigBtn = document.getElementById('lock-config-btn');
     const editConfigBtn = document.getElementById('edit-config-btn');
     const createTableBtn = document.getElementById('create-table-btn');
@@ -119,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const allocationTableBody = document.querySelector('#allocation-table tbody');
     const allocationError = document.getElementById('allocation-error');
 
-    // Helper Functions
     const getThemeFromPhoto = (photoNum) => Math.floor((parseInt(photoNum) - 1) / 3) + 1;
     const getThemeFromRa = (raNum) => parseInt(raNum);
 
@@ -130,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- STATE MANAGEMENT AND EXPORT ---
     function buildStateObject() {
-        const state = { rpConfig: {}, students: [], rpLocked: lockConfigBtn.disabled, studentsImported: !!allocationTableBody.innerHTML };
+        const state = { rpConfig: {}, students: [], rpLocked: lockConfigBtn.disabled };
         for (let i = 1; i <= 6; i++) state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
         
         if (allocationTableBody.innerHTML) {
@@ -183,47 +180,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // MODIFIED: Reworked for robustness and to fix bugs
     function exportToExcel() {
         const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
         const table = document.getElementById('allocation-table');
         const tableClone = table.cloneNode(true);
+        const originalRows = table.querySelectorAll('tbody tr');
 
-        tableClone.querySelectorAll('.result span, .selected-theme').forEach(el => {
-            const parentCell = el.parentElement;
-            let themeClass = '';
+        tableClone.querySelectorAll('tbody tr').forEach((clonedRow, index) => {
+            const originalRow = originalRows[index];
+            if (!originalRow) return;
 
-            for(const c of parentCell.classList) {
-                if (c.startsWith('theme-color-')) {
-                    themeClass = c;
-                    break;
+            // Process dropdown cells (Choices 1, 2, and Selected)
+            originalRow.querySelectorAll('select').forEach(select => {
+                const cellIndex = select.parentElement.cellIndex;
+                const clonedCell = clonedRow.cells[cellIndex];
+                const selectedValue = select.value;
+
+                if (selectedValue && THEMES[selectedValue]) {
+                    clonedCell.textContent = THEMES[selectedValue];
+                } else {
+                    clonedCell.textContent = '';
                 }
-            }
-             if (el.classList.contains('result')) {
-                for(const c of el.firstChild?.classList || []) {
-                     if (c.startsWith('theme-color-')) {
-                        themeClass = c;
-                        break;
+
+                // Color the 'Selected Theme' cell
+                if (select.classList.contains('selected-theme') && selectedValue) {
+                    clonedCell.style.backgroundColor = themeColors[`theme-color-${selectedValue}`];
+                }
+            });
+
+            // Process result cells (RA, RP, PT)
+            originalRow.querySelectorAll('.result').forEach(resultCell => {
+                const cellIndex = resultCell.cellIndex;
+                const clonedCell = clonedRow.cells[cellIndex];
+                const span = resultCell.querySelector('span');
+
+                if (span) {
+                    clonedCell.textContent = span.textContent;
+                    // Find theme class and apply color
+                    for (const className of span.classList) {
+                        if (className.startsWith('theme-color-')) {
+                            clonedCell.style.backgroundColor = themeColors[className];
+                            break;
+                        }
                     }
+                } else {
+                    clonedCell.textContent = '';
                 }
-            }
-
-            if (themeClass && themeColors[themeClass]) {
-                parentCell.style.backgroundColor = themeColors[themeClass];
-            }
-        });
-
-        tableClone.querySelectorAll('select').forEach(select => {
-            const parentCell = select.parentElement;
-            const selectedValue = select.value;
-            if (selectedValue && THEMES[selectedValue]) {
-                parentCell.textContent = THEMES[selectedValue];
-            } else {
-                parentCell.textContent = select.options[select.selectedIndex]?.text.split(': ')[1] || select.options[select.selectedIndex]?.text || '';
-            }
-        });
-
-        tableClone.querySelectorAll('.student-name, .exam-number').forEach(cell => {
-             cell.textContent = cell.textContent;
+            });
         });
 
         let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid #777;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
@@ -285,9 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
     createTableBtn.addEventListener('click', () => {
         const oldData = {};
         allocationTableBody.querySelectorAll('tr').forEach(row => {
-            const name = row.cells[1].textContent.trim();
-            if (name) oldData[name] = { 
-                examNumber: row.cells[0].textContent.trim(),
+            const examNumber = row.cells[0].textContent.trim();
+            if (examNumber) oldData[examNumber] = { 
+                name: row.cells[1].textContent.trim(),
                 choice1: row.querySelector('.theme-choice-1').value, 
                 choice2: row.querySelector('.theme-choice-2').value, 
                 selected: row.querySelector('.selected-theme').value, 
@@ -297,11 +301,16 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
+        // MODIFIED: Handle three-column paste
         const lines = document.getElementById('student-names-input').value.trim().split('\n');
         const studentData = lines.map(line => {
             const parts = line.split('\t');
-            return { examNumber: (parts[0] || '').trim(), name: (parts[1] || '').trim() };
-        }).filter(s => s.name);
+            const examNumber = (parts[0] || '').trim();
+            const firstName = (parts[1] || '').trim();
+            const lastName = (parts[2] || '').trim();
+            const name = `${firstName} ${lastName}`.trim();
+            return { examNumber, name };
+        }).filter(s => s.name && s.examNumber);
 
         if (studentData.length === 0) return;
 
@@ -310,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         allocationTableBody.innerHTML = studentData.map(s => 
             `<tr>
-                <td class="exam-number">${s.examNumber}</td>
+                <td class="exam-number" contenteditable="true">${s.examNumber}</td>
                 <td class="student-name" contenteditable="true">${s.name}</td>
                 <td><select class="theme-choice-1">${themeOptions}</select></td>
                 <td><select class="theme-choice-2">${themeOptions}</select></td>
@@ -322,10 +331,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ).join('');
         
         allocationTableBody.querySelectorAll('tr').forEach(row => {
-            const name = row.cells[1].textContent.trim();
-            const saved = oldData[name];
+            const examNumber = row.cells[0].textContent.trim();
+            const saved = oldData[examNumber];
             if (saved) {
-                row.cells[0].textContent = saved.examNumber;
+                row.cells[1].textContent = saved.name;
                 row.querySelector('.theme-choice-1').value = saved.choice1; 
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
@@ -354,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
             const name = row.cells[1].textContent.trim();
+            // Note: This reconstructs the name as a single column.
             return `${examNumber}\t${name}`;
         }).join('\n');
         document.getElementById('student-names-input').value = currentData;
