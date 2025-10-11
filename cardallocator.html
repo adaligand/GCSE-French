@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Speaking Exam Allocator</title>
+    <title>GCSE Speaking Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -42,7 +42,7 @@
 <body>
 
     <div class="container">
-        <h1>GCSE Speaking Exam Allocator 📋</h1>
+        <h1>GCSE Speaking Card Allocator 📋</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -224,7 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:.5pt solid #ccc;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
+        // MODIFIED/FIXED: Changed border color from #ccc to black
+        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:.5pt solid black;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
         const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tableHTML)));
         const link = document.createElement("a");
         link.href = dataUri;
@@ -393,7 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
             row.querySelector('.theme-choice-2').addEventListener('change', () => updateSelectedThemeForRow(row));
             row.querySelector('.selected-theme').addEventListener('change', (e) => colorCodeSelectedTheme(e.target));
 
-            // MODIFIED/FIXED: Added listeners to detect tier change and clear cards.
             const tierCell = row.cells[1];
             let initialTierValue = '';
 
@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tierCell.addEventListener('blur', () => {
                 const currentTierValue = tierCell.textContent.trim().toUpperCase();
-                if (initialTierValue !== currentTierValue && row.querySelector('.ra-result span')) {
+                if (initialTierValue && initialTierValue !== currentTierValue && row.querySelector('.ra-result span')) {
                     row.querySelector('.ra-result').innerHTML = '';
                     row.querySelector('.rp-result').innerHTML = '';
                     row.querySelector('.photo-result').innerHTML = '';
@@ -472,7 +472,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const tier = row.cells[1].textContent.trim().toUpperCase();
-            if (tier !== 'H' && tier !== 'F') return;
+            if (tier !== 'H' && tier !== 'F') {
+                allocationError.textContent = `Error: Invalid tier for ${row.cells[2].textContent}. Please use 'H' or 'F'.`;
+                allocationError.style.display = 'block';
+                return;
+            };
 
             const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
             const tierCounters = counters[tier];
