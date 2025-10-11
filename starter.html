@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Language Practice Hub</title>
+  <title>Language  Hub</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -67,7 +67,6 @@
     button:hover { transform: translateY(-2px); }
     .btn-primary { background-color: #2980b9; color: #fff; }
     .btn-primary:hover { background-color: #3498db; }
-    /* This style is no longer used by the back buttons */
     .btn-secondary {
       background-color: #6c757d;
       color: white;
@@ -304,22 +303,27 @@ async function initializeApp() {
         practice_allQuestions = practiceData.filter(q => q.Skill && q.Topic && q.Content);
 
         vocab_vocabSets = {};
+        let currentTheme = null; // Remembers the last theme seen
         let currentKey = null;
         let currentWords = [];
 
         vocabData.forEach(row => {
-            if (!row || row.length < 5) return;
+            if (!row || row.length < 5) return; // Safety check for malformed rows
 
-            const theme = row[0]?.trim();
+            const themeInRow = row[0]?.trim();
             const set = row[1]?.trim();
             const target = row[3]?.trim();
             const english = row[4]?.trim();
 
-            if (theme && set) {
+            if (themeInRow) {
+                currentTheme = themeInRow;
+            }
+
+            if (currentTheme && set) {
                 if (currentKey && currentWords.length > 0) {
                     vocab_vocabSets[currentKey] = currentWords;
                 }
-                currentKey = `${theme}.${set}`;
+                currentKey = `${currentTheme}.${set}`;
                 currentWords = [];
             }
 
@@ -383,16 +387,24 @@ function practice_generateQuestion() {
 
     if (originalUrl && originalUrl.includes('google.com/presentation')) {
         const fileIdMatch = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-        const slideIdMatch = originalUrl.match(/#slide=id\.([a-zA-Z0-9_.-]+)/);
 
-        if (fileIdMatch && slideIdMatch) {
+        if (fileIdMatch) {
             const fileId = fileIdMatch[1];
-            const slideId = `id.${slideIdMatch[1]}`;
-
-            const embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
-            contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
+            const slideIdMatch = originalUrl.match(/#slide=id\.([a-zA-Z0-9_.-]+)/);
             
-            const presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
+            let embedUrl;
+            let presentUrl;
+
+            if (slideIdMatch) {
+                const slideId = `id.${slideIdMatch[1]}`;
+                embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
+                presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
+            } else {
+                embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false`;
+                presentUrl = `https://docs.google.com/presentation/d/${fileId}/present`;
+            }
+            
+            contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
             
             fullscreenBtn.classList.remove('hide');
             fullscreenBtn.onclick = () => { window.open(presentUrl, '_blank'); };
