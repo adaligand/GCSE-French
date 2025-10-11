@@ -26,7 +26,6 @@
         #loading-message {
             text-align: center;
         }
-        
         .main-content-wrapper {
             display: flex;
             gap: 30px;
@@ -57,7 +56,6 @@
             flex-direction: column;
             gap: 15px;
         }
-        
         label {
             font-weight: bold;
         }
@@ -83,7 +81,6 @@
         #reveal-btn:hover { background-color: #2ecc71; }
         #print-btn { background-color: #8e44ad; }
         #print-btn:hover { background-color: #9b59b6; }
-        
         table {
             width: 100%;
             border-collapse: collapse;
@@ -100,7 +97,7 @@
             background-color: #f9f9f9;
         }
         th:first-child, td.num-cell {
-            width: 60px; 
+            width: 60px;
             text-align: center;
         }
         td.num-cell {
@@ -118,7 +115,6 @@
         .hide {
             display: none;
         }
-
         /* --- PRINT STYLES --- */
         @media print {
             @page {
@@ -173,10 +169,13 @@
              <div id="setup-controls" class="control-group hide">
                  <label for="theme-select">1. Choose Theme:</label>
                  <select id="theme-select"></select>
+
                  <label for="set-select">2. Choose Set:</label>
                  <select id="set-select"></select>
+
                  <label for="set-select-2">3. 2nd set (Optional):</label>
                  <select id="set-select-2"></select>
+
                  <button id="generate-btn">Generate List</button>
              </div>
             <div id="test-controls" class="control-group hide">
@@ -204,11 +203,7 @@
     const printArea = document.getElementById('print-area');
 
     let vocabSets = {};
-
-    const themeMap = {
-        '1': '1-Personal world', '2': '2-Lifestyle', '3': '3-Neighbourhood',
-        '4': '4-Media & Tech', '5': '5-Study & future', '6': '6-Travel and Tourism'
-    };
+    let dynamicThemeMap = {}; // Will be populated from the spreadsheet
 
     document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search);
@@ -225,8 +220,18 @@
                 let currentSetWords = [];
 
                 results.data.forEach(row => {
+                    // Capture theme name from Column A and set name from Column B
+                    const themeName = row[0] ? row[0].trim() : '';
                     const setNameInRow = row[1] ? row[1].trim() : '';
-                    const targetWord = row[3] ? row[3].trim() : ''; // CHANGED
+                    
+                    if (themeName && setNameInRow) {
+                        const themeNumber = setNameInRow.split('.')[0];
+                        if (themeNumber && !dynamicThemeMap[themeNumber]) {
+                            dynamicThemeMap[themeNumber] = themeName;
+                        }
+                    }
+                    
+                    const targetWord = row[3] ? row[3].trim() : '';
                     const englishWord = row[4] ? row[4].trim() : '';
 
                     if (setNameInRow !== '') {
@@ -234,12 +239,12 @@
                         currentSetName = setNameInRow;
                         currentSetWords = [];
                     }
-                    if (targetWord !== '' && englishWord !== '') { // CHANGED
-                        currentSetWords.push({ target: targetWord, english: englishWord }); // CHANGED
+                    if (targetWord !== '' && englishWord !== '') {
+                        currentSetWords.push({ target: targetWord, english: englishWord });
                     }
                 });
                 if (currentSetName && currentSetWords.length > 0) vocabSets[currentSetName] = currentSetWords;
-                
+                                
                 if (Object.keys(vocabSets).length > 0) {
                     initializeSelectors();
                     loadingMessage.classList.add('hide');
@@ -263,7 +268,8 @@
         themes.sort((a, b) => a - b).forEach(theme => {
             const option = document.createElement('option');
             option.value = theme;
-            option.textContent = themeMap[theme] || `Theme ${theme}`;
+            // Use the dynamically generated map here
+            option.textContent = dynamicThemeMap[theme] || `Theme ${theme}`;
             themeSelect.appendChild(option);
         });
         updateSetDropdown();
@@ -286,7 +292,7 @@
               option1.value = setName;
               option1.textContent = `${setName} (${vocabSets[setName].length} words)`;
               setSelect.appendChild(option1);
-              
+                            
               const option2 = option1.cloneNode(true);
               setSelect2.appendChild(option2);
         });
@@ -295,26 +301,26 @@
     function generateTest() {
         const selectedSetName1 = setSelect.value;
         const selectedSetName2 = setSelect2.value;
-        
+                
         if (!selectedSetName1) return;
 
         let combinedSet = [...vocabSets[selectedSetName1]];
         if (selectedSetName2 && selectedSetName2 !== "") {
             combinedSet = combinedSet.concat(vocabSets[selectedSetName2]);
         }
-        
-        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.target, item])).values()); // CHANGED
+                
+        const uniqueCombinedSet = Array.from(new Map(combinedSet.map(item => [item.target, item])).values());
         if (uniqueCombinedSet.length === 0) return;
 
         const shuffled = [...uniqueCombinedSet].sort(() => 0.5 - Math.random());
-        
-        const targetQuestionItems = shuffled.slice(0, 5); // CHANGED name for clarity
+                
+        const targetQuestionItems = shuffled.slice(0, 5);
         const englishQuestionItems = shuffled.slice(5, 10);
 
         testBody.innerHTML = '';
-        
+                
         // Generate Target Language to English questions
-        targetQuestionItems.forEach((item, index) => { // CHANGED name for clarity
+        targetQuestionItems.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="num-cell">${index + 1}</td>
@@ -327,7 +333,7 @@
         // Generate English to Target Language questions
         englishQuestionItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            const rowNumber = targetQuestionItems.length + index + 1; // CHANGED name for clarity
+            const rowNumber = targetQuestionItems.length + index + 1;
             row.innerHTML = `
                 <td class="num-cell">${rowNumber}</td>
                 <td class="answer-cell"><span class="answer">${item.target}</span></td>
@@ -335,7 +341,7 @@
             `;
             testBody.appendChild(row);
         });
-        
+                
         const onScreenTable = document.querySelector('#test-container table');
         const tableToPrint = onScreenTable.cloneNode(true); 
         const tableHeaderHTML = tableToPrint.querySelector('thead').outerHTML;
@@ -346,7 +352,7 @@
             <div class="print-table-wrapper">${fullTableHTML}</div>
             <div class="print-table-wrapper">${fullTableHTML}</div>
         `;
-        
+                
         testContainer.classList.remove('hide');
         testControls.classList.remove('hide');
         revealBtn.textContent = 'Reveal Answers';
@@ -356,7 +362,7 @@
     function revealAnswers() {
         const answers = document.querySelectorAll('.answer'); 
         if (answers.length === 0) return;
-        
+                
         const isHidden = !answers[0].classList.contains('visible');
         answers.forEach(span => {
             span.classList.toggle('visible', isHidden);
@@ -364,7 +370,6 @@
 
         revealBtn.textContent = isHidden ? 'Hide Answers' : 'Reveal Answers';
     }
-
 </script>
 
 </body>
