@@ -14,20 +14,8 @@
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        /* MODIFIED/FIXED: Normalized font properties to ensure consistent height between button and label elements */
         button, .action-btn-label {
-            padding: 12px 20px;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #fff;
-            background-color: #007bff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            box-sizing: border-box;
-            font-family: inherit; /* Ensures both elements use the same font */
-            line-height: 1.5; /* Normalizes the line height */
+            padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; box-sizing: border-box; font-family: inherit; line-height: 1.5;
         }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
         .action-btn { background-color: #28a745; }
@@ -46,14 +34,9 @@
         th { background-color: #005a9c; color: white; }
         tr:nth-child(even) { background-color: #f2f2f2; }
         .controls { display: flex; align-items: center; flex-wrap: wrap; }
-        .student-name[contenteditable]:focus, .exam-number[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
+        .student-name[contenteditable]:focus, .exam-number[contenteditable]:focus, .tier[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
         .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
-        .theme-color-1 { background-color: #aed6f1; } /* Light Blue */
-        .theme-color-2 { background-color: #a2d9ab; } /* Light Green */
-        .theme-color-3 { background-color: #f7dc6f; } /* Yellow */
-        .theme-color-4 { background-color: #d2b4de; } /* Light Purple */
-        .theme-color-5 { background-color: #f1948a; } /* Light Red/Coral */
-        .theme-color-6 { background-color: #dfdfdf; } /* Medium Blue */
+        .theme-color-1 { background-color: #aed6f1; } .theme-color-2 { background-color: #a2d9ab; } .theme-color-3 { background-color: #f7dc6f; } .theme-color-4 { background-color: #d2b4de; } .theme-color-5 { background-color: #f1948a; } .theme-color-6 { background-color: #dfdfdf; }
     </style>
 </head>
 <body>
@@ -81,7 +64,7 @@
             <div class="section" id="student-import-section">
                 <h2>Step 2: Import Students</h2>
                 <div id="student-entry-wrapper">
-                    <p>Paste from a spreadsheet (three columns: Exam Code, First Name, Last Name).</p>
+                    <p>Paste from a spreadsheet (four columns: Exam Number, Tier, First Name, Last Name).</p>
                     <textarea id="student-names-input" placeholder="Paste data here..."></textarea>
                     <button id="create-table-btn" class="setup-action-btn" style="margin-top: 10px;">Create Allocation Table</button>
                 </div>
@@ -102,6 +85,7 @@
                     <thead>
                         <tr>
                             <th>Exam Number</th>
+                            <th>Tier</th>
                             <th>Student Name</th> <th>Theme Choice 1</th> <th>Theme Choice 2</th> <th>Selected Theme</th>
                             <th>Read Aloud (RA)</th> <th>Role Play (RP)</th> <th>Photo Card (PT)</th>
                         </tr>
@@ -148,7 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
             allocationTableBody.querySelectorAll('tr').forEach(row => {
                 state.students.push({
                     examNumber: row.cells[0].textContent,
-                    name: row.cells[1].textContent,
+                    tier: row.cells[1].textContent, // ADDED
+                    name: row.cells[2].textContent,
                     choice1: row.querySelector('.theme-choice-1').value, 
                     choice2: row.querySelector('.theme-choice-2').value,
                     selected: row.querySelector('.selected-theme').value, 
@@ -175,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (state.students && state.students.length > 0) {
-            document.getElementById('student-names-input').value = state.students.map(s => `${s.examNumber}\t${s.name}`).join('\n');
+            document.getElementById('student-names-input').value = state.students.map(s => `${s.examNumber}\t${s.tier}\t${s.name}`).join('\n');
             createTableBtn.click();
             allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
                 const s = state.students[index];
@@ -300,7 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
         allocationTableBody.querySelectorAll('tr').forEach(row => {
             const examNumber = row.cells[0].textContent.trim();
             if (examNumber) oldData[examNumber] = { 
-                name: row.cells[1].textContent.trim(),
+                tier: row.cells[1].textContent.trim(),
+                name: row.cells[2].textContent.trim(),
                 choice1: row.querySelector('.theme-choice-1').value, 
                 choice2: row.querySelector('.theme-choice-2').value, 
                 selected: row.querySelector('.selected-theme').value, 
@@ -310,15 +296,17 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
+        // MODIFIED: Handle four-column paste
         const lines = document.getElementById('student-names-input').value.trim().split('\n');
         const studentData = lines.map(line => {
             const parts = line.split('\t');
             const examNumber = (parts[0] || '').trim();
-            const firstName = (parts[1] || '').trim();
-            const lastName = (parts[2] || '').trim();
+            const tier = (parts[1] || '').trim().toUpperCase();
+            const firstName = (parts[2] || '').trim();
+            const lastName = (parts[3] || '').trim();
             const name = `${firstName} ${lastName}`.trim();
-            return { examNumber, name };
-        }).filter(s => s.name && s.examNumber);
+            return { examNumber, tier, name };
+        }).filter(s => s.name && s.examNumber && s.tier);
 
         if (studentData.length === 0) return;
 
@@ -328,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allocationTableBody.innerHTML = studentData.map(s => 
             `<tr>
                 <td class="exam-number" contenteditable="true">${s.examNumber}</td>
+                <td class="tier" contenteditable="true">${s.tier}</td>
                 <td class="student-name" contenteditable="true">${s.name}</td>
                 <td><select class="theme-choice-1">${themeOptions}</select></td>
                 <td><select class="theme-choice-2">${themeOptions}</select></td>
@@ -342,7 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const examNumber = row.cells[0].textContent.trim();
             const saved = oldData[examNumber];
             if (saved) {
-                row.cells[1].textContent = saved.name;
+                row.cells[1].textContent = saved.tier;
+                row.cells[2].textContent = saved.name;
                 row.querySelector('.theme-choice-1').value = saved.choice1; 
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
@@ -370,8 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
     editStudentListBtn.addEventListener('click', () => {
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
-            const name = row.cells[1].textContent.trim();
-            return `${examNumber}\t${name}`;
+            const tier = row.cells[1].textContent.trim();
+            const name = row.cells[2].textContent.trim();
+            return `${examNumber}\t${tier}\t${name}`;
         }).join('\n');
         document.getElementById('student-names-input').value = currentData;
         createTableBtn.textContent = 'Update Allocation Table';
@@ -409,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function applyCardColor(cell, cardText, currentRpThemeMap) {
+    function applyCardColor(cell, cardText, currentRpThemeMap, tier) {
         cell.innerHTML = '';
         if (!cardText) return;
         const cardNum = parseInt(cardText.match(/\d+/)[0]);
@@ -417,41 +408,68 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cardText.startsWith('PT')) themeNum = getThemeFromPhoto(cardNum);
         else if (cardText.startsWith('RA')) themeNum = getThemeFromRa(cardNum);
         else if (cardText.startsWith('RP')) themeNum = currentRpThemeMap[cardNum];
-        if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText}</span>`;
+        if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
     }
 
+    // MODIFIED: Allocation logic is now partitioned by tier
     autoAllocateBtn.addEventListener('click', () => {
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
         allocationError.style.display = 'none';
-        let photoCounters = {}, raUsage = {}, rpUsage = {};
-        for(let i=1; i<=6; i++) { photoCounters[i]=0; raUsage[i]=0; rpUsage[i]=0; }
+
+        const counters = {
+            H: { photo: {}, ra: {}, rp: {} },
+            F: { photo: {}, ra: {}, rp: {} }
+        };
+
+        ['H', 'F'].forEach(tier => {
+            for(let i=1; i<=6; i++) { 
+                counters[tier].photo[i] = 0;
+                counters[tier].ra[i] = 0;
+                counters[tier].rp[i] = 0;
+            }
+        });
+
         const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
         for (const row of rows) {
             if (!row.querySelector('.selected-theme').value) {
-                allocationError.textContent = `Error: Please select a final theme for all students. ${row.cells[1].textContent} is missing a selection.`;
+                allocationError.textContent = `Error: Please select a final theme for all students. ${row.cells[2].textContent} is missing a selection.`;
                 allocationError.style.display = 'block'; return;
             }
         }
         rows.forEach(row => {
+            const tier = row.cells[1].textContent.trim().toUpperCase();
+            if (tier !== 'H' && tier !== 'F') return; // Skip if tier is invalid
+
             const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
-            const photoCard = (selectedTheme - 1) * 3 + 1 + (photoCounters[selectedTheme]++ % 3);
-            let validRa = Object.keys(raUsage).filter(r => getThemeFromRa(r) !== selectedTheme).sort((a,b) => raUsage[a]-raUsage[b]);
-            let validRp = Object.keys(rpUsage).filter(r => rpThemeMap[r] !== selectedTheme).sort((a,b) => rpUsage[a]-rpUsage[b]);
+            const tierCounters = counters[tier];
+
+            const photoCard = (selectedTheme - 1) * 3 + 1 + (tierCounters.photo[selectedTheme]++ % 3);
+            let validRa = Object.keys(tierCounters.ra).filter(r => getThemeFromRa(r) !== selectedTheme).sort((a,b) => tierCounters.ra[a] - tierCounters.ra[b]);
+            let validRp = Object.keys(tierCounters.rp).filter(r => rpThemeMap[r] !== selectedTheme).sort((a,b) => tierCounters.rp[a] - tierCounters.rp[b]);
+            
             let assignedRa, assignedRp;
             for (const ra of validRa) {
-                for (const rp of validRp) { if (getThemeFromRa(ra) !== rpThemeMap[rp]) { assignedRa = ra; assignedRp = rp; break; }}
+                for (const rp of validRp) { 
+                    if (getThemeFromRa(ra) !== rpThemeMap[rp]) { 
+                        assignedRa = ra; 
+                        assignedRp = rp; 
+                        break; 
+                    }
+                }
                 if (assignedRa) break;
             }
 
             if (!assignedRa || !assignedRp) {
-                 allocationError.textContent = `CRITICAL ERROR: Could not find a valid non-conflicting RA/RP pair for ${row.cells[1].textContent}.`;
+                 allocationError.textContent = `CRITICAL ERROR: Could not find a valid non-conflicting RA/RP pair for ${row.cells[2].textContent}.`;
                  allocationError.style.display = 'block'; return;
             }
 
-            raUsage[assignedRa]++; rpUsage[assignedRp]++;
-            applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, rpThemeMap);
-            applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, rpThemeMap);
-            applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, rpThemeMap);
+            tierCounters.ra[assignedRa]++;
+            tierCounters.rp[assignedRp]++;
+
+            applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, rpThemeMap, tier);
+            applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, rpThemeMap, tier);
+            applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, rpThemeMap, tier);
         });
     });
 
