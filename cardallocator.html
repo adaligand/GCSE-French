@@ -224,7 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid #777;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
+        // MODIFIED/FIXED: Changed border style to be thinner for a standard Excel look
+        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:.5pt solid #ccc;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
         const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tableHTML)));
         const link = document.createElement("a");
         link.href = dataUri;
@@ -328,8 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const examNumber = row.cells[0].textContent.trim();
             const saved = oldData[examNumber];
             if (saved) {
-                // MODIFIED/FIXED: Removed the lines that overwrote user edits.
-                // The new name and tier from the textarea are now preserved.
                 row.querySelector('.theme-choice-1').value = saved.choice1; 
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
