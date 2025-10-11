@@ -39,7 +39,7 @@
 <body>
 
     <div class="container">
-        <h1>GCSE Speaking Exam Allocator 📋 (Final Corrected)</h1>
+        <h1>GCSE Speaking Exam Allocator 📋 (Final Version)</h1>
         
         <div class="controls section">
             <button id="save-progress-btn" class="save-btn">💾 Save Progress</button>
@@ -130,26 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
             state.students.push({
                 name: row.cells[0].textContent, choice1: row.querySelector('.theme-choice-1').value, choice2: row.querySelector('.theme-choice-2').value,
                 selected: row.querySelector('.selected-theme').value, 
-                ra: row.querySelector('.ra-result span')?.textContent || '', 
-                rp: row.querySelector('.rp-result span')?.textContent || '',
-                pt: row.querySelector('.photo-result span')?.textContent || ''
+                ra: row.querySelector('.ra-result').innerHTML, 
+                rp: row.querySelector('.rp-result').innerHTML,
+                pt: row.querySelector('.photo-result').innerHTML
             });
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         const confirmMsg = document.getElementById('save-confirm-msg');
         confirmMsg.style.display = 'inline';
         setTimeout(() => { confirmMsg.style.display = 'none'; }, 2000);
-    }
-
-    function applyCardColor(cell, cardText, rpThemeMap) {
-        cell.innerHTML = '';
-        if (!cardText) return;
-        const cardNum = parseInt(cardText.match(/\d+/)[0]);
-        let themeNum = 0;
-        if (cardText.startsWith('PT')) themeNum = getThemeFromPhoto(cardNum);
-        else if (cardText.startsWith('RA')) themeNum = getThemeFromRa(cardNum);
-        else if (cardText.startsWith('RP')) themeNum = rpThemeMap[cardNum];
-        if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText}</span>`;
     }
 
     function loadState() {
@@ -175,9 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.querySelector('.theme-choice-2').value = s.choice2;
                 row.querySelector('.theme-choice-1').dispatchEvent(new Event('change'));
                 row.querySelector('.selected-theme').value = s.selected;
-                applyCardColor(row.querySelector('.ra-result'), s.ra, loadedRpThemeMap);
-                applyCardColor(row.querySelector('.rp-result'), s.rp, loadedRpThemeMap);
-                applyCardColor(row.querySelector('.photo-result'), s.pt, loadedRpThemeMap);
+                row.querySelector('.ra-result').innerHTML = s.ra;
+                row.querySelector('.rp-result').innerHTML = s.rp;
+                row.querySelector('.photo-result').innerHTML = s.pt;
             });
             if(state.studentsImported) {
                 document.getElementById('student-entry-wrapper').style.display = 'none';
@@ -226,10 +215,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     createTableBtn.addEventListener('click', () => {
+        // ** THE FIX IS HERE: Preserve ALL existing data **
+        const oldData = {};
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const name = row.cells[0].textContent.trim();
+            if (name) {
+                oldData[name] = {
+                    choice1: row.querySelector('.theme-choice-1').value,
+                    choice2: row.querySelector('.theme-choice-2').value,
+                    selected: row.querySelector('.selected-theme').value,
+                    ra: row.querySelector('.ra-result').innerHTML,
+                    rp: row.querySelector('.rp-result').innerHTML,
+                    pt: row.querySelector('.photo-result').innerHTML
+                };
+            }
+        });
+
         const names = document.getElementById('student-names-input').value.trim().split('\n').filter(name => name.trim() !== '');
         if (names.length === 0) return;
         const themeOptions = Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('');
         allocationTableBody.innerHTML = names.map(name => `<tr><td class="student-name" contenteditable="true">${name.trim()}</td><td><select class="theme-choice-1">${themeOptions}</select></td><td><select class="theme-choice-2">${themeOptions}</select></td><td><select class="selected-theme" disabled><option value="">-</option></select></td><td class="result ra-result"></td><td class="result rp-result"></td><td class="result photo-result"></td></tr>`).join('');
+        
+        // ** Re-apply the preserved data **
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const name = row.cells[0].textContent.trim();
+            const saved = oldData[name];
+            if (saved) {
+                row.querySelector('.theme-choice-1').value = saved.choice1;
+                row.querySelector('.theme-choice-2').value = saved.choice2;
+                row.querySelector('.theme-choice-1').dispatchEvent(new Event('change'));
+                row.querySelector('.selected-theme').value = saved.selected;
+                row.querySelector('.ra-result').innerHTML = saved.ra;
+                row.querySelector('.rp-result').innerHTML = saved.rp;
+                row.querySelector('.photo-result').innerHTML = saved.pt;
+            }
+        });
+
         document.getElementById('student-entry-wrapper').style.display = 'none';
         editStudentListBtn.style.display = 'inline-block';
         allocationSection.style.display = 'block';
@@ -275,10 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
             const photoCard = (selectedTheme - 1) * 3 + 1 + (photoCounters[selectedTheme]++ % 3);
             let validRa = Object.keys(raUsage).filter(r => getThemeFromRa(r) !== selectedTheme).sort((a,b) => raUsage[a]-raUsage[b]);
-            
-            // ** THE FIX IS HERE **
             let validRp = Object.keys(rpUsage).filter(r => rpThemeMap[r] !== selectedTheme).sort((a,b) => rpUsage[a]-rpUsage[b]);
-            
             let assignedRa, assignedRp;
             for (const ra of validRa) {
                 for (const rp of validRp) { if (getThemeFromRa(ra) !== rpThemeMap[rp]) { assignedRa = ra; assignedRp = rp; break; }}
