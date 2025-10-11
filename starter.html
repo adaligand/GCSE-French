@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Language Hub</title>
+<title>Language starter Hub</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 body {
@@ -445,4 +445,74 @@ function practice_generateQuestion() {
   practice_questionDisplay.innerHTML = `<h2>${q.Question}</h2>${contentHtml}`;
 }
 
-// --- Vocabulary Section Logic
+// --- Vocabulary Section Logic ---
+function vocab_initializeSelectors() {
+  const themes = [...new Set(Object.keys(vocab_vocabSets).map(k => k.split('.')[0]))];
+  vocab_themeSelect.innerHTML = '';
+  themes.sort().forEach(theme => {
+    const opt = document.createElement('option');
+    opt.value = theme;
+    opt.textContent = theme;
+    vocab_themeSelect.appendChild(opt);
+  });
+  vocab_themeSelect.addEventListener('change', vocab_updateSets);
+  vocab_setSelect.addEventListener('change', () => {});
+  vocab_generateBtn.addEventListener('click', vocab_generateTest);
+  vocab_revealBtn.addEventListener('click', () => {
+    document.querySelectorAll('.answer-cell span').forEach(s => s.classList.add('visible'));
+  });
+  document.getElementById('vocab-print-btn').addEventListener('click', vocab_generatePrintVersion);
+  vocab_updateSets();
+}
+
+function vocab_updateSets() {
+  const theme = vocab_themeSelect.value;
+  const sets = [...new Set(Object.keys(vocab_vocabSets).filter(k => k.startsWith(theme+'.')).map(k => k.split('.')[1]))];
+  vocab_setSelect.innerHTML = '';
+  vocab_setSelect2.innerHTML = '';
+  sets.sort().forEach(s => {
+    const opt1 = document.createElement('option'); opt1.value = s; opt1.textContent = s;
+    const opt2 = document.createElement('option'); opt2.value = s; opt2.textContent = s;
+    vocab_setSelect.appendChild(opt1); vocab_setSelect2.appendChild(opt2);
+  });
+}
+
+function vocab_generateTest() {
+  const theme = vocab_themeSelect.value;
+  const set1 = vocab_setSelect.value;
+  const set2 = vocab_setSelect2.value;
+  const key1 = `${theme}.${set1}`;
+  const key2 = set2 ? `${theme}.${set2}` : null;
+  let vocabList = vocab_vocabSets[key1] ? [...vocab_vocabSets[key1]] : [];
+  if (key2 && vocab_vocabSets[key2]) vocabList = vocabList.concat(vocab_vocabSets[key2]);
+  vocab_testBody.innerHTML = '';
+  vocabList.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="num-cell">${idx+1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
+    vocab_testBody.appendChild(tr);
+  });
+  vocab_testContainer.classList.remove('hide');
+  vocab_testControls.classList.remove('hide');
+}
+
+// --- Print ---
+function vocab_generatePrintVersion() {
+  vocab_printArea.innerHTML = '';
+  const tableCopy1 = vocab_testContainer.cloneNode(true);
+  const tableCopy2 = vocab_testContainer.cloneNode(true);
+  tableCopy1.classList.remove('hide');
+  tableCopy2.classList.remove('hide');
+  tableCopy1.querySelectorAll('.answer-cell span').forEach(s => s.classList.remove('visible'));
+  tableCopy2.querySelectorAll('.answer-cell span').forEach(s => s.classList.remove('visible'));
+  const wrapper1 = document.createElement('div'); wrapper1.className = 'quiz-block'; wrapper1.appendChild(tableCopy1);
+  const wrapper2 = document.createElement('div'); wrapper2.className = 'quiz-block'; wrapper2.appendChild(tableCopy2);
+  vocab_printArea.appendChild(wrapper1); vocab_printArea.appendChild(wrapper2);
+  vocab_printArea.classList.remove('hide');
+  window.print();
+}
+
+// --- Init ---
+initializeApp();
+</script>
+</body>
+</html>
