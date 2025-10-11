@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentence Practice Tool</title>
+    <title>Language Practice Hub</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load PapaParse for CSV handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         /* Apply Inter font and basic styling */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
@@ -13,101 +15,199 @@
             font-family: 'Inter', sans-serif; 
             background-color: #f3f4f6; /* bg-gray-100 */
         }
+        .tab-button {
+            @apply px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg;
+        }
+        .tab-button.active {
+            @apply bg-indigo-600 text-white shadow-md;
+        }
+        .tab-button:not(.active) {
+            @apply text-gray-700 hover:bg-indigo-100;
+        }
     </style>
 </head>
 <body class="min-h-screen p-4 sm:p-8">
 
-    <div class="max-w-xl mx-auto">
+    <div class="max-w-3xl mx-auto">
         <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">
-            Sentence Practice Tool
+            Language Practice Hub
         </h1>
-        <div id="app-container" class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
-            <!-- Content will be rendered here by JavaScript -->
-            <div id="loading-spinner" class="flex flex-col items-center justify-center p-8 text-gray-500">
-                <svg class="w-8 h-8 animate-spin text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p class="mt-4 text-lg font-medium">Loading data and initializing...</p>
-                <p class="text-sm" id="user-id-display">User ID: Authenticating...</p>
+        <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+            <!-- Tab Navigation -->
+            <div id="tabs" class="flex space-x-2 p-2 bg-gray-50 rounded-xl mb-6">
+                <!-- Buttons rendered by JS -->
             </div>
-        </div>
-        <div class="text-center mt-4 text-xs text-gray-500">
-            <p id="app-id-display"></p>
+
+            <div id="app-container">
+                <!-- Loading content -->
+                <div id="loading-spinner" class="flex flex-col items-center justify-center p-8 text-gray-500">
+                    <svg class="w-8 h-8 animate-spin text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="mt-4 text-lg font-medium">Loading data from 3 Google Sheets...</p>
+                    <div id="status-display" class="mt-2 text-sm text-center"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Firebase and Application Logic -->
+    <!-- Application Logic -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- Firebase and Environment Setup ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let db;
-        let auth;
-        let userId = null;
-        let isAuthReady = false;
+        // --- Configuration (Your Three Sheet Links) ---
+        const DATA_SOURCES = {
+            'Sentence Practice': {
+                url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeenmRJ1Gqolo-8KqU5A84PProbYHoY3SrXKFxFgdzwf_FdmJnpfbpEf9KmbhqhQk17K6USG_UOJg9/pub?output=csv',
+                parser: 'sentences' // Use specialized parser
+            },
+            'Vocabulary List': {
+                url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv',
+                parser: 'simple'
+            },
+            'Reading/Listening': {
+                url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvNFlHDx-4cZbDzwKy5Yb_DKeSxS2wSXxyX1Ua6pGcf27yFjmqOPz9jQ_rzoV3-zoZI9lw4EIfmdXH/pub?output=csv',
+                parser: 'simple'
+            }
+        };
 
         // --- Application State ---
-        let sentences = [];
+        let allData = {}; // Stores data from all three sheets: { 'Activity Name': { data: [], topics: [] } }
+        let currentActivity = 'Sentence Practice'; // Default view
+        let isLoading = true;
+        let loadStatuses = {};
+
+        // Sentence Practice Specific State (kept separate for clarity)
+        let sentenceData = [];
+        let sentenceTopics = ['all'];
+        let selectedTopic = 'all';
         let currentSentenceIndex = 0;
         let isCorrect = null;
         let typedText = '';
-        let topics = ['all'];
-        let selectedTopic = 'all';
 
-        document.getElementById('app-id-display').textContent = `Current App ID: ${appId}`;
+        // --- Data Fetching and Parsing ---
 
-        // Utility to get the filtered list based on the selected topic
-        const getFilteredSentences = () => {
-            if (selectedTopic === 'all') {
-                return sentences;
-            }
-            return sentences.filter(s => s.topic === selectedTopic);
+        /**
+         * Specialized parser for the Sentence Spreadsheet format.
+         * Theme in A, Topic in B, Sentence in D.
+         */
+        const parseSentencesCSV = (csvData) => {
+            const parsedSentences = [];
+            const uniqueTopics = new Set(['all']);
+
+            let currentTheme = 'General';
+            let currentTopic = 'Miscellaneous';
+
+            csvData.forEach(row => {
+                if (row.length < 5) return; 
+
+                const colA = (row[0] || '').trim(); // Theme
+                const colB = (row[1] || '').trim(); // Topic
+                const colD = (row[3] || '').trim(); // Target Sentence
+                const colE = (row[4] || '').trim(); // Optional Hint
+
+                // 1. Update Theme (Column A)
+                if (colA) {
+                    currentTheme = colA;
+                }
+                // 2. Update Topic (Column B)
+                if (colB) {
+                    currentTopic = colB;
+                }
+                // 3. Extract Sentence (Column D)
+                if (colD) {
+                    parsedSentences.push({
+                        text: colD,
+                        topic: currentTopic,
+                        theme: currentTheme,
+                        hint: colE || ''
+                    });
+                    uniqueTopics.add(currentTopic);
+                }
+            });
+
+            // Update global sentence state
+            sentenceData = parsedSentences.sort((a, b) => a.topic.localeCompare(b.topic));
+            sentenceTopics = Array.from(uniqueTopics).sort();
+            
+            return {
+                data: sentenceData,
+                topics: sentenceTopics
+            };
+        };
+        
+        /** Simple parser for Vocab/Reading/Listening sheets (assumes row-by-row data). */
+        const parseSimpleCSV = (csvData) => {
+            // Returns raw data for simple rendering/inspection in the other tabs
+            return { data: csvData }; 
+        };
+
+        const fetchAllData = async () => {
+            const dataPromises = Object.entries(DATA_SOURCES).map(([name, config]) => {
+                return new Promise((resolve) => {
+                    Papa.parse(config.url, {
+                        download: true,
+                        header: false,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            let parsedData = {};
+                            if (results.data.length > 0) {
+                                if (config.parser === 'sentences') {
+                                    parsedData = parseSentencesCSV(results.data);
+                                } else {
+                                    parsedData = parseSimpleCSV(results.data);
+                                }
+                                loadStatuses[name] = { status: 'SUCCESS', count: parsedData.data.length };
+                            } else {
+                                loadStatuses[name] = { status: 'ERROR', message: 'No data found.' };
+                            }
+                            allData[name] = parsedData;
+                            resolve();
+                        },
+                        error: (error) => {
+                            console.error(`Error loading ${name}:`, error);
+                            loadStatuses[name] = { status: 'ERROR', message: `Failed to load: ${error.message}` };
+                            resolve(); // Resolve anyway so other sheets can load
+                        }
+                    });
+                });
+            });
+
+            await Promise.all(dataPromises);
+            isLoading = false;
+            renderApp();
         };
 
         // --- Core UI Rendering Logic ---
 
-        const renderApp = () => {
-            const container = document.getElementById('app-container');
-            if (!isAuthReady || !userId) {
-                // If not ready, keep the loading spinner visible
-                document.getElementById('user-id-display').textContent = `User ID: ${userId || 'Authenticating...'}`;
-                return;
-            }
+        const setActiveTab = (activityName) => {
+            currentActivity = activityName;
+            renderApp();
+        };
 
-            // Hide the spinner once ready
-            const spinner = document.getElementById('loading-spinner');
-            if (spinner) spinner.style.display = 'none';
+        const renderTabs = () => {
+            const tabsContainer = document.getElementById('tabs');
+            if (!tabsContainer) return;
 
-            if (sentences.length === 0) {
-                container.innerHTML = `
-                    <div class="p-8 text-center text-gray-500 bg-white rounded-xl shadow-lg">
-                        <svg class="w-12 h-12 mx-auto text-indigo-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4"></path></svg>
-                        <h2 class="text-xl font-bold">No Sentences Found</h2>
-                        <p class="mt-2">
-                            Please ensure your spreadsheet data is imported into the
-                            Firestore collection: <strong>/artifacts/${appId}/users/${userId}/sentences</strong> with a field named <strong>text</strong>.
-                        </p>
-                        <p class="mt-1 text-sm text-gray-400">
-                            Current User ID: ${userId}
-                        </p>
-                    </div>
-                `;
-                return;
-            }
+            tabsContainer.innerHTML = Object.keys(DATA_SOURCES).map(name => `
+                <button
+                    onclick="setActiveTab('${name}')"
+                    class="tab-button ${currentActivity === name ? 'active' : ''}"
+                >
+                    ${name}
+                </button>
+            `).join('');
+        };
 
-            const currentSentence = getFilteredSentences()[currentSentenceIndex];
+        const renderSentencePractice = (container) => {
+            const filteredSentences = getFilteredSentences();
+            const currentSentence = filteredSentences[currentSentenceIndex];
             const displaySentence = currentSentence ? currentSentence.text : 'No sentence loaded.';
-            const filteredCount = getFilteredSentences().length;
+            const filteredCount = filteredSentences.length;
+            const currentTheme = currentSentence ? currentSentence.theme : 'N/A';
+            const currentTopic = currentSentence ? currentSentence.topic : 'N/A';
 
             // Generate Topic Selector Options
-            const optionsHtml = topics.map(t => `
+            const optionsHtml = sentenceTopics.map(t => `
                 <option value="${t}" ${t === selectedTopic ? 'selected' : ''}>
                     ${t.charAt(0).toUpperCase() + t.slice(1)}
                 </option>
@@ -142,12 +242,29 @@
                     `;
                 }
             }
-
+            
+            if (sentenceData.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-gray-500 rounded-xl">
+                        <svg class="w-12 h-12 mx-auto text-indigo-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4"></path></svg>
+                        <h2 class="text-xl font-bold">No Sentences Found</h2>
+                        <p class="mt-2">
+                            Please check your sheet and ensure data is properly formatted: **Theme in A, Topic in B, Sentence in D**.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
 
             container.innerHTML = `
+                <!-- Theme and Topic Info -->
+                <p class="text-sm text-center text-indigo-500 font-medium mb-4">
+                    Theme: ${currentTheme} | Topic: ${currentTopic}
+                </p>
+                
                 <!-- Topic Selector (Dropdown Menu) -->
                 <div class="relative w-full mb-8">
-                    <label for="topic-select" class="block mb-1 text-sm font-medium text-gray-700">Select Topic</label>
+                    <label for="topic-select" class="block mb-1 text-sm font-medium text-gray-700">Filter by Topic</label>
                     <div class="relative">
                         <select
                             id="topic-select"
@@ -162,9 +279,9 @@
                     </div>
                 </div>
 
-                <div class="p-6 md:p-8 bg-white rounded-xl shadow-2xl transition-all duration-300">
+                <div class="p-6 md:p-8 bg-white rounded-xl shadow-2xl transition-all duration-300 border border-gray-100">
                     <h2 class="text-xl font-bold text-indigo-600 mb-4">
-                        Sentence Practice
+                        Sentence to Replicate
                     </h2>
 
                     <!-- Sentence to Replicate -->
@@ -187,7 +304,7 @@
                     ${feedbackHtml}
                 </div>
 
-                <!-- Control Buttons - Restored Style -->
+                <!-- Control Buttons -->
                 <div class="flex space-x-4 mt-6">
                     <button
                         onclick="handleCheck()"
@@ -205,12 +322,79 @@
                 </div>
 
                 <p class="text-sm mt-4 text-center text-gray-400">
-                    Sentence ${currentSentenceIndex + 1} of ${filteredCount} (Total: ${sentences.length})
+                    Sentence ${currentSentenceIndex + 1} of ${filteredCount} (Total loaded: ${sentenceData.length})
                 </p>
             `;
         };
 
-        // --- Event Handlers ---
+        const renderSimpleDataView = (container, dataKey, title) => {
+            const data = allData[dataKey]?.data || [];
+            const rowCount = data.length;
+            const headers = rowCount > 0 ? data[0] : [];
+            const rows = data.slice(1); // Exclude header row if present
+
+            container.innerHTML = `
+                <div class="p-4">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">${title} (${rowCount} rows loaded)</h2>
+                    <p class="text-gray-600 mb-4">This view displays the raw data loaded from your **${title}** sheet.</p>
+                    
+                    ${rowCount === 0 ? 
+                        `<div class="text-center py-12 text-gray-500 border border-dashed rounded-lg">No usable data found in this sheet.</div>` :
+                        `<div class="overflow-x-auto rounded-lg shadow-md border">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-indigo-50 sticky top-0">
+                                    <tr>
+                                        ${headers.map((h, i) => `<th class="px-3 py-2 text-left text-xs font-semibold text-indigo-700 uppercase tracking-wider">${h || \`Col \${i+1}\`}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-100">
+                                    ${rows.map(row => `
+                                        <tr>
+                                            ${row.map(cell => `<td class="px-3 py-2 whitespace-nowrap text-sm text-gray-800">${cell}</td>`).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>`
+                    }
+                </div>
+            `;
+        };
+        
+        const renderApp = () => {
+            const container = document.getElementById('app-container');
+            const spinner = document.getElementById('loading-spinner');
+            const statusDisplay = document.getElementById('status-display');
+
+            if (isLoading) {
+                if (spinner) spinner.style.display = 'flex';
+                statusDisplay.innerHTML = Object.entries(loadStatuses).map(([name, status]) => {
+                    let color = 'text-yellow-600';
+                    if (status.status === 'SUCCESS') color = 'text-green-600';
+                    if (status.status === 'ERROR') color = 'text-red-600';
+                    return `<p class="${color}">${name}: ${status.status} ${status.count !== undefined ? `(${status.count} items)` : ''}</p>`;
+                }).join('');
+                return;
+            }
+
+            if (spinner) spinner.style.display = 'none';
+            renderTabs();
+            
+            // Render content based on active tab
+            container.innerHTML = ''; // Clear previous content
+
+            if (currentActivity === 'Sentence Practice') {
+                renderSentencePractice(container);
+            } else if (currentActivity === 'Vocabulary List') {
+                renderSimpleDataView(container, 'Vocabulary List', 'Vocabulary List');
+            } else if (currentActivity === 'Reading/Listening') {
+                renderSimpleDataView(container, 'Reading/Listening', 'Reading and Listening Resources');
+            }
+        };
+
+        // --- Global Event Handlers for Sentence Practice ---
+
+        window.setActiveTab = setActiveTab; // Make accessible globally
 
         window.handleTopicChange = (event) => {
             selectedTopic = event.target.value;
@@ -222,21 +406,17 @@
 
         window.handleInput = (event) => {
             typedText = event.target.value;
-            isCorrect = null; // Clear feedback on typing
+            isCorrect = null; 
             
-            // Re-render only to update button disabled state
-            const checkBtn = document.querySelector('button:nth-of-type(1)');
+            // Manually update check button state
+            const checkBtn = document.querySelector('button[onclick="handleCheck()"]');
             if (checkBtn) {
                 const currentSentence = getFilteredSentences()[currentSentenceIndex];
                 checkBtn.disabled = !currentSentence || typedText.trim().length === 0;
 
-                // Re-render the feedback area to clear previous message
-                if (document.querySelector('.p-4.mt-4.rounded-xl')) {
-                    const tempTyped = typedText; // Save for restoration
-                    typedText = ''; // Temporarily clear to remove feedback
-                    renderApp(); 
-                    typedText = tempTyped; // Restore text, relies on not overwriting the textarea content
-                }
+                // Simple manual removal of feedback
+                const feedbackEl = document.querySelector('.p-4.mt-4.rounded-xl');
+                if (feedbackEl) feedbackEl.remove();
             }
         };
 
@@ -260,95 +440,21 @@
             typedText = '';
             renderApp();
             
-            // Focus the textarea immediately for a better flow
             setTimeout(() => {
                 const textarea = document.getElementById('typed-text-area');
                 if(textarea) textarea.focus();
             }, 50);
         };
-
-
-        // --- Initialization ---
-
-        const initializeFirebase = async () => {
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                const signInUser = async () => {
-                    try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (error) {
-                        console.error('Firebase Auth Error:', error);
-                        userId = crypto.randomUUID();
-                    }
-                };
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                    } else if (!userId) {
-                        signInUser();
-                    }
-                    isAuthReady = true;
-                    // Start data subscription once auth is ready
-                    subscribeToSentences();
-                    document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
-                });
-
-            } catch (e) {
-                console.error('Failed to initialize Firebase:', e);
-                isAuthReady = true;
-                userId = crypto.randomUUID();
-                renderApp();
+        
+        const getFilteredSentences = () => {
+            if (selectedTopic === 'all') {
+                return sentenceData;
             }
+            return sentenceData.filter(s => s.topic === selectedTopic);
         };
 
-        const subscribeToSentences = () => {
-            if (!db || !userId) return;
-
-            const sentencesPath = `artifacts/${appId}/users/${userId}/sentences`;
-            const q = query(collection(db, sentencesPath));
-
-            onSnapshot(q, (snapshot) => {
-                const fetchedSentences = [];
-                const uniqueTopics = new Set(['all']);
-
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    // Must have 'text' field to be considered a valid sentence
-                    if (data.text) { 
-                        fetchedSentences.push({ id: doc.id, ...data });
-                        if (data.topic) {
-                            uniqueTopics.add(data.topic);
-                        }
-                    }
-                });
-
-                sentences = fetchedSentences;
-                topics = Array.from(uniqueTopics);
-                
-                // Reset practice context if the data changed
-                currentSentenceIndex = 0;
-                isCorrect = null;
-                typedText = '';
-
-                renderApp();
-                console.log(`[Firestore] Successfully loaded ${sentences.length} sentences.`);
-
-            }, (error) => {
-                console.error('[Firestore] Error fetching sentences:', error);
-                renderApp(); // Render failure state if needed
-            });
-        };
-
-        // Start the application
-        initializeFirebase();
+        // --- Start the application ---
+        window.onload = fetchAllData;
 
     </script>
 </body>
