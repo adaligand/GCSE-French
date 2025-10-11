@@ -392,6 +392,23 @@ document.addEventListener('DOMContentLoaded', () => {
             row.querySelector('.theme-choice-1').addEventListener('change', () => updateSelectedThemeForRow(row));
             row.querySelector('.theme-choice-2').addEventListener('change', () => updateSelectedThemeForRow(row));
             row.querySelector('.selected-theme').addEventListener('change', (e) => colorCodeSelectedTheme(e.target));
+
+            // MODIFIED/FIXED: Added listeners to detect tier change and clear cards.
+            const tierCell = row.cells[1];
+            let initialTierValue = '';
+
+            tierCell.addEventListener('focus', () => {
+                initialTierValue = tierCell.textContent.trim().toUpperCase();
+            });
+
+            tierCell.addEventListener('blur', () => {
+                const currentTierValue = tierCell.textContent.trim().toUpperCase();
+                if (initialTierValue !== currentTierValue && row.querySelector('.ra-result span')) {
+                    row.querySelector('.ra-result').innerHTML = '';
+                    row.querySelector('.rp-result').innerHTML = '';
+                    row.querySelector('.photo-result').innerHTML = '';
+                }
+            });
         });
     }
 
@@ -406,7 +423,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
     }
 
-    // MODIFIED/FIXED: Reworked the entire function for the new, non-destructive logic
     autoAllocateBtn.addEventListener('click', () => {
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
         allocationError.style.display = 'none';
@@ -420,7 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
         
-        // 1. Prime the counters with already allocated cards
         rows.forEach(row => {
             const tier = row.cells[1].textContent.trim().toUpperCase();
             if (tier !== 'H' && tier !== 'F') return;
@@ -447,13 +462,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 2. Allocate cards only for students who need them
         let allocationsMade = 0;
         rows.forEach(row => {
             const hasSelectedTheme = !!row.querySelector('.selected-theme').value;
             const hasCards = !!row.querySelector('.ra-result span');
 
-            // Skip if no theme is selected or cards are already allocated
             if (!hasSelectedTheme || hasCards) {
                 return;
             }
