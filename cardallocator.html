@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Speaking Exam Allocator</title>
+    <title>GCSE Speaking Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -39,12 +39,28 @@
         .student-name[contenteditable]:focus, .exam-number[contenteditable]:focus, .tier[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
         .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
         .theme-color-1 { background-color: #aed6f1; } .theme-color-2 { background-color: #a2d9ab; } .theme-color-3 { background-color: #f7dc6f; } .theme-color-4 { background-color: #d2b4de; } .theme-color-5 { background-color: #f1948a; } .theme-color-6 { background-color: #dfdfdf; }
+        
+        /* MODIFIED/FIXED: Added new styles for the RP config layout */
+        .rp-config-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .rp-config-item label {
+            display: inline-block;
+            margin-bottom: 0;
+            flex-shrink: 0; /* Prevents the label text from wrapping */
+        }
+        .rp-config-item select {
+            width: auto;
+            flex-grow: 1; /* Allows the dropdown to fill the remaining space */
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>GCSE Speaking Exam Allocator 📋</h1>
+        <h1>📋 GCSE Speaking Card Allocator</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -83,7 +99,7 @@
             <div class="controls" style="margin-bottom: 20px;">
                 <button id="edit-config-btn" class="edit-btn">✏️ Edit Config</button>
                 <button id="edit-student-list-btn" class="edit-btn" style="margin-left: 10px;">✏️ Edit Student List</button>
-                <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE CARDS</button>
+                <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE</button>
                 <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
             </div>
             <div class="alert" id="allocation-error"></div>
@@ -105,7 +121,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const THEMES = { 1: "Personal world", 2: "Lifestyle", 3: "Neighbourhood", 4: "Media & Tech", 5: "Study & future", 6: "Travel and Tourism" };
+    const THEMES = { 1: "1- Personal world", 2: "2- Lifestyle", 3: "3- Neighbourhood", 4: "4- Media & Tech", 5: "5- Study & future", 6: "6- Travel and Tourism" };
 
     const lockConfigBtn = document.getElementById('lock-config-btn');
     const editConfigBtn = document.getElementById('edit-config-btn');
@@ -133,9 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ).join('');
     }
 
+    // MODIFIED/FIXED: Added a class to the container div
     function initializeRpConfig() {
         const rpConfigGrid = document.getElementById('rp-config-grid');
-        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('')}</select></div>`).join('');
+        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('')}</select></div>`).join('');
     }
     
     function buildStateObject() {
@@ -360,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!lockConfigBtn.disabled) lockConfigBtn.click();
 
-        // MODIFIED/FIXED: Generate and shuffle a master list of unique pairs
         const themePairs = [];
         for (let i = 0; i < studiedThemes.length; i++) {
             for (let j = i + 1; j < studiedThemes.length; j++) {
