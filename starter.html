@@ -52,6 +52,7 @@
     #reading-btn { background-color: #2980b9; }
     #listening-btn { background-color: #27ae60; }
     #vocab-btn { background-color: #8e44ad; }
+    #sentence-btn { background-color: #e67e22; } /* NEW color for Sentence Practice */
 
     /* --- BUTTON STYLE --- */
     button {
@@ -111,7 +112,7 @@
       border: none;
     }
 
-    /* --- VOCAB --- */
+    /* --- VOCAB & SENTENCE LAYOUT --- */
     .vocab-main-wrapper { display: flex; gap: 30px; margin-top: 20px; }
     .vocab-test-panel { flex-grow: 1; }
     .vocab-controls-panel {
@@ -129,6 +130,8 @@
       flex-direction: column;
       gap: 15px;
     }
+    
+    /* --- VOCAB TABLE STYLES --- */
     #vocab-test-container table {
       width: 100%;
       border-collapse: collapse;
@@ -156,6 +159,22 @@
 
     .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
     .answer-cell span.visible { visibility: visible; }
+    
+    /* --- SENTENCE SPECIFIC --- */
+    #sentence-activity-display h3 {
+        text-align: left;
+        color: #e67e22;
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    #sentence-answer-display {
+        border-radius: 8px;
+        background-color: #ecf0f1;
+        border: 1px solid #bdc3c7;
+        padding: 15px;
+        color: #333;
+        font-size: 1.1em;
+    }
 
     /* --- PRINT --- */
     @media print {
@@ -163,8 +182,12 @@
         @page { size: A4 landscape; margin: 1cm; }
         
         /* Hide all user interface elements */
-        .container, #main-menu, #practice-section, #vocab-controls-panel { display: none !important; }
+        .container, #main-menu, #practice-section, #vocab-controls-panel, #sentence-section { display: none !important; }
         
+        /* The logic in vocab_generatePrintVersion relies on displaying the vocab section. 
+           If the user is printing from the sentence section, this won't work cleanly 
+           without restructuring the print function, but we keep the current vocab print logic. */
+
         /* Show only the vocab section for printing */
         #vocab-section { 
             display: block !important; 
@@ -230,6 +253,7 @@
       <button id="reading-btn" class="menu-button">Reading Practice</button>
       <button id="listening-btn" class="menu-button">Listening Practice</button>
       <button id="vocab-btn" class="menu-button">Vocabulary Test</button>
+      <button id="sentence-btn" class="menu-button">Sentence Practice</button>
     </div>
   </div>
 
@@ -284,22 +308,65 @@
       </div>
     </div>
   </div>
+  
+  <!-- NEW SENTENCE SECTION -->
+  <div id="sentence-section" class="hide">
+    <div class="vocab-main-wrapper">
+      <div class="vocab-test-panel">
+        <h1 style="text-align: left;">Sentence Practice</h1>
+        <div id="sentence-activity-display" style="min-height: 200px; padding: 15px; border: 1px solid #ccc; border-radius: 8px; background-color: #fff;">
+          <p>Generate a sentence activity using the controls on the right.</p>
+        </div>
+        <div id="sentence-answer-display" class="hide" style="margin-top: 15px;">
+          <div style="padding: 15px; background-color: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px;">
+            <strong>Answer:</strong> <span id="sentence-answer-text"></span>
+          </div>
+        </div>
+      </div>
+      <div class="vocab-controls-panel">
+        <div id="sentence-setup-controls" class="vocab-control-group">
+          <label for="sentence-theme-select">1. Choose Theme:</label><select id="sentence-theme-select"></select>
+          <label for="sentence-set-select">2. Choose Set:</label><select id="sentence-set-select"></select>
+          <label for="sentence-activity-select">3. Choose Activity:</label>
+          <select id="sentence-activity-select">
+            <option value="">-- Select Activity --</option>
+            <option value="break_flow">Break the Flow (No spaces)</option>
+            <option value="unjumble">Unjumble Words</option>
+            <option value="missing_vowel">Missing Vowels</option>
+            <option value="missing_consonant">Missing Consonants</option>
+            <option value="random_fr">Random Target Sentence (Answer EN)</option>
+            <option value="random_en">Random English Sentence (Answer FR)</option>
+          </select>
+          <button id="sentence-generate-btn" class="btn-primary">Generate Activity</button>
+        </div>
+        <div id="sentence-test-controls" class="vocab-control-group hide">
+          <button id="sentence-reveal-btn" class="btn-primary">Reveal Answer</button>
+        </div>
+        <button class="btn-primary back-btn">Back to Main Menu</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 // --- URLs and Global Variables ---
 const practiceSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvNFlHDx-4cZbDzwKy5Yb_DKeSxS2wSXxyX1Ua6pGcf27yFjmqOPz9jQ_rzoV3-zoZI9lw4EIfmdXH/pub?output=csv";
 const vocabSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv";
+const sentenceSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv"; // NOTE: This is a PLACEHOLDER. Replace this URL with your actual Sentence Sheet URL!
+
 let practice_allQuestions = [];
 let vocab_vocabSets = {};
+let sentence_sentenceSets = {}; // NEW
 
 // --- DOM Element References ---
 const mainMenu = document.getElementById('main-menu');
 const practiceSection = document.getElementById('practice-section');
 const vocabSection = document.getElementById('vocab-section');
+const sentenceSection = document.getElementById('sentence-section'); // NEW
 const readingBtn = document.getElementById('reading-btn');
 const listeningBtn = document.getElementById('listening-btn');
 const vocabBtn = document.getElementById('vocab-btn');
+const sentenceBtn = document.getElementById('sentence-btn'); // NEW
 const currentPracticeTypeInput = document.getElementById('current-practice-type');
 
 const practice_topicSelect = document.getElementById('topic-select'); // Theme Selector
@@ -308,6 +375,7 @@ const practice_generateBtn = document.getElementById('generate-practice-btn');
 
 const practice_questionDisplay = document.getElementById('question-display');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
+
 const vocab_themeSelect = document.getElementById('vocab-theme-select');
 const vocab_setSelect = document.getElementById('vocab-set-select');
 const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
@@ -318,22 +386,41 @@ const vocab_testControls = document.getElementById('vocab-test-controls');
 const vocab_revealBtn = document.getElementById('vocab-reveal-btn');
 const vocab_printArea = document.getElementById('vocab-print-area');
 
+const sentence_themeSelect = document.getElementById('sentence-theme-select'); // NEW
+const sentence_setSelect = document.getElementById('sentence-set-select'); // NEW
+const sentence_activitySelect = document.getElementById('sentence-activity-select'); // NEW
+const sentence_generateBtn = document.getElementById('sentence-generate-btn'); // NEW
+const sentence_revealBtn = document.getElementById('sentence-reveal-btn'); // NEW
+const sentence_activityDisplay = document.getElementById('sentence-activity-display'); // NEW
+const sentence_answerDisplay = document.getElementById('sentence-answer-display'); // NEW
+const sentence_answerText = document.getElementById('sentence-answer-text'); // NEW
+const sentence_testControls = document.getElementById('sentence-test-controls'); // NEW
+
+let currentSentenceData = { // NEW
+    question: '',
+    answer: '',
+    activityType: ''
+};
+
 // --- Navigation ---
 readingBtn.addEventListener('click', () => showPractice('Reading'));
 listeningBtn.addEventListener('click', () => showPractice('Listening'));
 vocabBtn.addEventListener('click', showVocabTest);
+sentenceBtn.addEventListener('click', showSentencePractice); // NEW
 document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
 
 function showMainMenu() {
     mainMenu.classList.remove('hide');
     practiceSection.classList.add('hide');
     vocabSection.classList.add('hide');
+    sentenceSection.classList.add('hide'); // NEW
 }
 
 function showPractice(type) {
     mainMenu.classList.add('hide');
     practiceSection.classList.remove('hide');
     vocabSection.classList.add('hide');
+    sentenceSection.classList.add('hide'); // NEW
     document.getElementById('practice-title').textContent = `${type} Practice`;
     currentPracticeTypeInput.value = type;
     practice_populateTopics();
@@ -343,7 +430,24 @@ function showVocabTest() {
     mainMenu.classList.add('hide');
     practiceSection.classList.add('hide');
     vocabSection.classList.remove('hide');
+    sentenceSection.classList.add('hide'); // NEW
 }
+
+// NEW
+function showSentencePractice() {
+    mainMenu.classList.add('hide');
+    practiceSection.classList.add('hide');
+    vocabSection.classList.add('hide');
+    sentenceSection.classList.remove('hide');
+    
+    // Reset display
+    sentence_activityDisplay.innerHTML = '<p>Generate a sentence activity using the controls on the right.</p>';
+    sentence_answerDisplay.classList.add('hide');
+    sentence_testControls.classList.add('hide');
+
+    sentence_initializeSelectors();
+}
+
 
 // --- Data Loading ---
 function loadData(url, options) {
@@ -362,12 +466,15 @@ async function initializeApp() {
     readingBtn.disabled = true;
     listeningBtn.disabled = true;
     vocabBtn.disabled = true;
+    sentenceBtn.disabled = true; // NEW
     readingBtn.textContent = 'Loading...';
+    sentenceBtn.textContent = 'Loading...';
 
     try {
-        const [practiceData, vocabData] = await Promise.all([
+        const [practiceData, vocabData, sentenceData] = await Promise.all([
             loadData(practiceSheetUrl, { header: true }),
-            loadData(vocabSheetUrl, { header: false })
+            loadData(vocabSheetUrl, { header: false }),
+            loadData(sentenceSheetUrl, { header: false }) // NEW
         ]);
 
         // Renaming columns based on new structure: A=Skill, B=Theme, C=Question, D=Content
@@ -379,6 +486,7 @@ async function initializeApp() {
         })).filter(q => q.Skill && q.Theme && q.Content);
 
 
+        // --- VOCAB DATA PARSING ---
         vocab_vocabSets = {};
         let currentTheme = null; 
         let currentKey = null;
@@ -396,21 +504,51 @@ async function initializeApp() {
                 currentTheme = themeInRow;
             }
 
-            if (currentTheme && set) {
-                if (currentKey && currentWords.length > 0) {
+            if (currentTheme && set && target && english) {
+                // Check if a new set starts OR if the theme changes and a new set name is present
+                if (currentKey && currentWords.length > 0 && currentKey !== `${currentTheme}.${set}`) {
                     vocab_vocabSets[currentKey] = currentWords;
+                    currentWords = [];
                 }
                 currentKey = `${currentTheme}.${set}`;
-                currentWords = [];
-            }
-
-            if (currentKey && target && english) {
                 currentWords.push({ target, english });
             }
         });
-
         if (currentKey && currentWords.length > 0) {
             vocab_vocabSets[currentKey] = currentWords;
+        }
+
+        // --- SENTENCE DATA PARSING (New) ---
+        sentence_sentenceSets = {};
+        let currentSTheme = null; 
+        let currentSKey = null;
+        let currentSSentences = [];
+
+        sentenceData.forEach(row => {
+            if (!row || row.length < 5) return; 
+
+            const themeInRow = row[0]?.trim(); // Col A
+            const set = row[1]?.trim(); // Col B
+            const target = row[3]?.trim(); // Col D (Target Sentence)
+            const english = row[4]?.trim(); // Col E (English Sentence)
+
+            if (themeInRow) {
+                currentSTheme = themeInRow;
+            }
+
+            if (currentSTheme && set && target && english) {
+                // Check if a new set starts OR if the theme changes and a new set name is present
+                 if (currentSKey && currentSSentences.length > 0 && currentSKey !== `${currentSTheme}.${set}`) {
+                    sentence_sentenceSets[currentSKey] = currentSSentences;
+                    currentSSentences = [];
+                }
+                currentSKey = `${currentSTheme}.${set}`;
+                currentSSentences.push({ target, english });
+            }
+        });
+
+        if (currentSKey && currentSSentences.length > 0) {
+            sentence_sentenceSets[currentSKey] = currentSSentences;
         }
         
         vocab_initializeSelectors();
@@ -418,7 +556,9 @@ async function initializeApp() {
         readingBtn.disabled = false;
         listeningBtn.disabled = false;
         vocabBtn.disabled = false;
+        sentenceBtn.disabled = false; // NEW
         readingBtn.textContent = 'Reading Practice';
+        sentenceBtn.textContent = 'Sentence Practice';
 
     } catch (error) {
         console.error("Failed to load spreadsheet data:", error);
@@ -542,7 +682,7 @@ function practice_generateQuestion() {
     practice_questionDisplay.innerHTML = `<h2>${q.Question}</h2>${contentHtml}`;
 }
 
-// --- Vocabulary Section Logic ---
+// --- Vocabulary Section Logic (Themes) ---
 const vocab_themeMap = {
     '1': '1-Personal world',
     '2': '2-Lifestyle',
@@ -650,6 +790,173 @@ function vocab_generatePrintVersion() {
     window.print();
     
     document.title = "Language Practice Hub";
+}
+
+// --- Sentence Section Logic ---
+
+function sentence_initializeSelectors() {
+    const themes = [...new Set(Object.keys(sentence_sentenceSets).map(k => k.split('.')[0]))];
+    sentence_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>';
+    themes.sort().forEach(theme => {
+        const opt = document.createElement('option');
+        opt.value = theme;
+        opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`; 
+        sentence_themeSelect.appendChild(opt);
+    });
+    sentence_updateSetDropdown();
+}
+
+function sentence_updateSetDropdown() {
+    const theme = sentence_themeSelect.value;
+    sentence_setSelect.innerHTML = '<option value="">-- Select Set --</option>';
+
+    if (!theme) return;
+
+    const sets = [...new Set(Object.keys(sentence_sentenceSets).filter(k => k.startsWith(theme + '.')).map(k => k))];
+    sets.sort().forEach(setName => {
+        const opt1 = document.createElement('option');
+        opt1.value = setName;
+        
+        const topicName = setName.substring(setName.indexOf('.') + 1);
+        
+        opt1.textContent = `${topicName} (${sentence_sentenceSets[setName].length} sentences)`;
+        sentence_setSelect.appendChild(opt1);
+    });
+}
+
+sentence_themeSelect.addEventListener('change', sentence_updateSetDropdown);
+sentence_generateBtn.addEventListener('click', sentence_generateActivity);
+sentence_revealBtn.addEventListener('click', sentence_revealAnswer);
+
+
+function sentence_generateActivity() {
+    const setKey = sentence_setSelect.value;
+    const activityType = sentence_activitySelect.value;
+    
+    // Hide controls/answers on new generation
+    sentence_answerDisplay.classList.add('hide');
+    sentence_testControls.classList.add('hide');
+    sentence_activityDisplay.innerHTML = 'Generating activity...';
+    
+    if (!setKey || !activityType) {
+        sentence_activityDisplay.innerHTML = '<p>Please select a Theme, Set, and Activity.</p>';
+        return;
+    }
+
+    const sentences = sentence_sentenceSets[setKey];
+    if (!sentences || sentences.length === 0) {
+        sentence_activityDisplay.innerHTML = '<p>No sentences found for the selected set.</p>';
+        return;
+    }
+
+    // Pick a random sentence
+    const randomSentence = sentences[Math.floor(Math.random() * sentences.length)];
+    let questionHtml = '';
+    let answerText = '';
+    
+    const targetSentence = randomSentence.target; // Col D (e.g., French)
+    const englishSentence = randomSentence.english; // Col E (e.g., English)
+
+    // Helper functions
+    const removeSpaces = (text) => text.replace(/\s/g, '');
+    const shuffleWords = (text) => text.split(/[\s,.;:?!—]+/g).sort(() => 0.5 - Math.random()).join(' ');
+    const removeChars = (text, type) => {
+        const vowels = /[aeiouyAEIOUYáéíóúýÁÉÍÓÚÝ]/g;
+        const consonants = /[^aeiouyAEIOUYáéíóúýÁÉÍÓÚÝ\s,.;:?!—]/g;
+        if (type === 'vowels') return text.replace(vowels, '_');
+        if (type === 'consonants') return text.replace(consonants, '_');
+        return text;
+    };
+    const underscoreText = (text) => text.replace(/[a-zA-ZáéíóúýÁÉÍÓÚÝ0-9]/g, '_');
+
+
+    switch (activityType) {
+        case 'break_flow':
+            // Question: Target sentence without spaces (Col D). Answer: Target sentence (Col D).
+            questionHtml = `<h3>Break the Flow: Find the words!</h3><p style="font-size: 1.5em; font-weight: bold; padding: 10px; background-color: #f0f8ff;">${removeSpaces(targetSentence)}</p>`;
+            answerText = targetSentence;
+            break;
+            
+        case 'unjumble':
+            // Question: Target sentence jumbled (Col D). Answer: Target sentence (Col D).
+            questionHtml = `<h3>Unjumble: Put the words in order!</h3><p style="font-size: 1.5em; font-weight: bold; padding: 10px; background-color: #f0f8ff;">${shuffleWords(targetSentence)}</p>`;
+            answerText = targetSentence;
+            break;
+            
+        case 'missing_vowel':
+        case 'missing_consonant':
+            const type = activityType.split('_')[1];
+            // Question: Target sentence with missing chars (Col D) + English sentence as underscores (Col E).
+            questionHtml = `
+                <h3>Missing ${type.charAt(0).toUpperCase() + type.slice(1)}s: Fill in the blanks!</h3>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+                    <div style="flex: 1; min-width: 45%;">
+                        <p style="font-weight: bold; color: #2980b9;">Target Language (Fill in):</p>
+                        <p style="font-size: 1.3em; background-color: #f0f8ff; padding: 12px; border-radius: 4px;">${removeChars(targetSentence, type)}</p>
+                    </div>
+                    <div style="flex: 1; min-width: 45%;">
+                        <p style="font-weight: bold; color: #e67e22;">English Hint (Underscores):</p>
+                        <p style="font-size: 1.3em; background-color: #fffbe8; padding: 12px; border-radius: 4px;">${underscoreText(englishSentence)}</p>
+                    </div>
+                </div>
+            `;
+            answerText = `
+                <strong>Target:</strong> ${targetSentence}<br>
+                <strong>English:</strong> ${englishSentence}
+            `;
+            break;
+
+        case 'random_fr':
+            // Question: Random Target sentence (Col D). Answer: English sentence (Col E).
+            questionHtml = `<h3>Random Sentence (Target Language)</h3><p style="font-size: 1.5em; font-weight: bold; padding: 15px; background-color: #f0f8ff; border-radius: 4px;">${targetSentence}</p>`;
+            answerText = englishSentence;
+            break;
+
+        case 'random_en':
+            // Question: Random English sentence (Col E). Answer: Target sentence (Col D).
+            questionHtml = `<h3>Random Sentence (English)</h3><p style="font-size: 1.5em; font-weight: bold; padding: 15px; background-color: #fffbe8; border-radius: 4px;">${englishSentence}</p>`;
+            answerText = targetSentence;
+            break;
+
+        default:
+            sentence_activityDisplay.innerHTML = '<p>Invalid activity selected.</p>';
+            return;
+    }
+
+    currentSentenceData = {
+        question: questionHtml,
+        answer: answerText,
+        activityType: activityType
+    };
+    
+    sentence_activityDisplay.innerHTML = questionHtml;
+    sentence_testControls.classList.remove('hide');
+}
+
+function sentence_revealAnswer() {
+    const { answer } = currentSentenceData;
+
+    if (answer) {
+        // Show the answer display area
+        sentence_answerDisplay.classList.remove('hide');
+        
+        let label = "Correct Answer";
+
+        if (currentSentenceData.activityType === 'random_fr') {
+            label = "English Translation";
+        } else if (currentSentenceData.activityType === 'random_en') {
+            label = "Target Language Translation";
+        } else if (currentSentenceData.activityType.includes('missing')) {
+             label = "Full Sentences";
+        }
+
+        sentence_answerText.innerHTML = `${answer}`;
+        document.querySelector('#sentence-answer-display strong').textContent = `${label}: `;
+        
+    } else {
+        // Handle case where no question was generated
+        sentence_activityDisplay.innerHTML = '<p>Please generate an activity first.</p>';
+    }
 }
 
 // --- Start the App ---
