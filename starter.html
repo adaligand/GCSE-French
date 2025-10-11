@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Language Practice Hub</title>
+  <title>Language Hub</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -62,29 +62,30 @@
       cursor: pointer;
       padding: 12px 20px;
       transition: background-color 0.2s ease, transform 0.1s ease;
+      white-space: nowrap; /* Prevents button text from wrapping */
     }
     button:hover { transform: translateY(-2px); }
     .btn-primary { background-color: #2980b9; color: #fff; }
     .btn-primary:hover { background-color: #3498db; }
     .btn-secondary {
-  background-color: #2980b9;
-  color: white;
-}
-.btn-secondary:hover {
-  background-color: #3498db;
-}
+      background-color: #6c757d; /* A more neutral secondary color */
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
 
 
     /* --- PRACTICE --- */
+    /* MODIFIED: Updated to align all controls in a single row */
     .practice-controls {
       display: flex;
-      gap: 20px;
+      gap: 15px; /* Adjusted gap for a tighter look */
       margin-bottom: 25px;
-      flex-wrap: wrap;
+      align-items: flex-end; /* Vertically aligns buttons with the dropdown */
     }
     .practice-control-group {
-      flex: 1;
-      min-width: 200px;
+      flex-grow: 1; /* Allows the dropdown group to take available space */
       display: flex;
       flex-direction: column;
     }
@@ -96,7 +97,7 @@
       border: 1px solid #dddfe2;
       background-color: #f5f6f7;
     }
-    .practice-button-container { display: flex; align-items: flex-end; }
+    /* REMOVED .practice-button-container as it's no longer needed */
     #question-display {
       border: 1px solid #e0e0e0;
       border-radius: 12px;
@@ -181,18 +182,15 @@
         <label for="topic-select">Choose a Topic:</label>
         <select id="topic-select"><option>Loading Topics...</option></select>
       </div>
-      <div class="practice-control-group practice-button-container">
-        <button id="generate-practice-btn" class="btn-primary">Generate Question</button>
-      </div>
+      <button id="generate-practice-btn" class="btn-primary">Generate Question</button>
+      <button id="fullscreen-btn" class="btn-primary hide">🔈 Open Full Screen</button>
+      <button class="btn-secondary back-btn">Back to Main Menu</button>
     </div>
     <div id="question-display">
       <h2>Your question will appear here</h2>
       <p>Select a topic and click "Generate Question".</p>
     </div>
-    <div style="text-align:center;margin-top:25px;">
-      <button class="btn-secondary back-btn">Back to Main Menu</button>
     </div>
-  </div>
 
   <div id="vocab-section" class="hide">
     <div class="vocab-main-wrapper">
@@ -241,6 +239,7 @@ const currentPracticeTypeInput = document.getElementById('current-practice-type'
 const practice_topicSelect = document.getElementById('topic-select');
 const practice_generateBtn = document.getElementById('generate-practice-btn');
 const practice_questionDisplay = document.getElementById('question-display');
+const fullscreenBtn = document.getElementById('fullscreen-btn');
 const vocab_themeSelect = document.getElementById('vocab-theme-select');
 const vocab_setSelect = document.getElementById('vocab-set-select');
 const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
@@ -269,7 +268,7 @@ function showPractice(type) {
     vocabSection.classList.add('hide');
     document.getElementById('practice-title').textContent = `${type} Practice`;
     currentPracticeTypeInput.value = type;
-    practice_populateTopics(); // Now this will work because data is pre-loaded
+    practice_populateTopics();
 }
 
 function showVocabTest() {
@@ -279,7 +278,6 @@ function showVocabTest() {
 }
 
 // --- Data Loading ---
-// ** CHANGED **: Wrap PapaParse in a Promise for better control
 function loadData(url, options) {
     return new Promise((resolve, reject) => {
         Papa.parse(url, {
@@ -292,25 +290,20 @@ function loadData(url, options) {
     });
 }
 
-// ** CHANGED **: Central function to load all data and initialize the app
 async function initializeApp() {
-    // Disable buttons to prevent clicks while data is loading
     readingBtn.disabled = true;
     listeningBtn.disabled = true;
     vocabBtn.disabled = true;
     readingBtn.textContent = 'Loading...';
 
     try {
-        // Load both sheets at the same time
         const [practiceData, vocabData] = await Promise.all([
             loadData(practiceSheetUrl, { header: true }),
             loadData(vocabSheetUrl, { header: false })
         ]);
 
-        // Process Practice Data
         practice_allQuestions = practiceData.filter(q => q.Skill && q.Topic && q.Content);
 
-        // Process Vocab Data
         vocabData.forEach(row => {
             const theme = row[0]?.trim();
             const set = row[1]?.trim();
@@ -323,10 +316,8 @@ async function initializeApp() {
             }
         });
 
-        // ** NEW **: Populate dropdowns AFTER data is loaded
         vocab_initializeSelectors();
 
-        // Re-enable buttons
         readingBtn.disabled = false;
         listeningBtn.disabled = false;
         vocabBtn.disabled = false;
@@ -357,28 +348,38 @@ function practice_populateTopics() {
     });
 }
 
+// MODIFIED: Manages the new fullscreen button
 function practice_generateQuestion() {
     const topic = practice_topicSelect.value;
     const type = currentPracticeTypeInput.value;
     const questions = practice_allQuestions.filter(q => q.Skill === type && q.Topic === topic);
+
+    // Hide the fullscreen button by default and clear any previous link
+    fullscreenBtn.classList.add('hide');
+    fullscreenBtn.onclick = null;
+
     if (questions.length === 0) {
         practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
         return;
     }
     const q = questions[Math.floor(Math.random() * questions.length)];
     let content = q.Content;
+
     if (content.includes('google.com/presentation')) {
         const fileId = content.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
         if (fileId) {
-            content = `
-                <iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false" allowfullscreen></iframe>
-                <button onclick="window.open('https://docs.google.com/presentation/d/${fileId}/present','_blank')" class="btn-primary" style="margin-top:15px;">🔈 Open Full Screen</button>
-            `;
+            // Set the iframe content (without the old button)
+            content = `<iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false" allowfullscreen></iframe>`;
+            
+            // Show the dedicated fullscreen button in the controls and assign its action
+            fullscreenBtn.classList.remove('hide');
+            fullscreenBtn.onclick = () => {
+                window.open(`https://docs.google.com/presentation/d/${fileId}/present`, '_blank');
+            };
         }
     }
     practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${content}`;
 }
-
 
 // --- Vocabulary Section Logic ---
 const vocab_themeMap = {
@@ -392,14 +393,14 @@ const vocab_themeMap = {
 
 function vocab_initializeSelectors() {
     const themes = [...new Set(Object.keys(vocab_vocabSets).map(k => k.split('.')[0]))];
-    vocab_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>'; // Add a default option
+    vocab_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>';
     themes.sort().forEach(theme => {
         const opt = document.createElement('option');
         opt.value = theme;
         opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`;
         vocab_themeSelect.appendChild(opt);
     });
-    vocab_updateSetDropdown(); // Initialize with empty sets
+    vocab_updateSetDropdown();
 }
 
 function vocab_updateSetDropdown() {
@@ -407,13 +408,12 @@ function vocab_updateSetDropdown() {
     vocab_setSelect.innerHTML = '';
     vocab_setSelect2.innerHTML = '';
     
-    // Add a default "None" option for the second dropdown
     const none = document.createElement('option');
     none.value = '';
     none.textContent = '-- None --';
     vocab_setSelect2.appendChild(none);
 
-    if (!theme) return; // If no theme is selected, stop here
+    if (!theme) return;
 
     const sets = [...new Set(Object.keys(vocab_vocabSets).filter(k => k.startsWith(theme + '.')).map(k => k))];
     sets.sort().forEach(setName => {
@@ -440,7 +440,7 @@ function vocab_generateTest() {
         combined = combined.concat(vocab_vocabSets[set2]);
     }
     
-    combined = Array.from(new Map(combined.map(item => [item.target, item])).values()); // Remove duplicates
+    combined = Array.from(new Map(combined.map(item => [item.target, item])).values());
     if (combined.length === 0) return;
 
     const shuffled = combined.sort(() => 0.5 - Math.random());
