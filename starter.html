@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Language Hub</title>
+  <title>Language Practice Hub</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -354,6 +354,7 @@ const BASE_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID
 
 // --- URLs for Data Sheets ---
 // Assumes Reading/Listening/Vocabulary data is on the default sheet (Sheet 1, GID 0)
+// If the sheet is correctly published, these URLs should work.
 const practiceSheetUrl = BASE_EXPORT_URL;
 const vocabSheetUrl = BASE_EXPORT_URL;
 
@@ -417,10 +418,12 @@ sentenceBtn.addEventListener('click', showSentencePractice);
 document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
 
 function showMainMenu() {
-    mainMenu.classList.remove('hide');
+    mainMenu.classList.add('hide');
     practiceSection.classList.add('hide');
     vocabSection.classList.add('hide');
-    sentenceSection.classList.add('hide'); 
+    sentenceSection.classList.add('hide');
+    // Ensure only the main menu is visible
+    mainMenu.classList.remove('hide'); 
 }
 
 function showPractice(type) {
@@ -456,17 +459,35 @@ function showSentencePractice() {
 
 
 // --- Data Loading ---
-function loadData(url, options) {
-    return new Promise((resolve, reject) => {
-        Papa.parse(url, {
-            ...options,
-            download: true,
-            skipEmptyLines: true,
-            complete: (results) => resolve(results.data),
-            error: (err) => reject(err),
-        });
-    });
+async function loadDataWithRetry(url, options, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await new Promise((resolve, reject) => {
+                Papa.parse(url, {
+                    ...options,
+                    download: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        // Check if the data is likely an error message (like "Not Found")
+                        if (results.data.length === 1 && results.data[0].length === 1 && results.data[0][0].includes('Not Found')) {
+                            reject(new Error("Google Sheet CSV Not Found or Access Denied. Is it published to the web?"));
+                            return;
+                        }
+                        resolve(results.data);
+                    },
+                    error: (err) => reject(err),
+                });
+            });
+        } catch (error) {
+            console.warn(`Attempt ${i + 1} failed for ${url}:`, error.message);
+            if (i === maxRetries - 1) {
+                throw error; // Re-throw the error on the last attempt
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff: 1s, 2s, 3s
+        }
+    }
 }
+
 
 async function initializeApp() {
     readingBtn.disabled = true;
@@ -478,20 +499,19 @@ async function initializeApp() {
 
     try {
         // Fetch data from the single spreadsheet, using GID for Sheet 2 data
-        const [practiceData, vocabData, sentenceData] = await Promise.all([
-            loadData(practiceSheetUrl, { header: true }), // Sheet 1 (assumed practice data)
-            loadData(vocabSheetUrl, { header: false }), // Sheet 1 (assumed vocab data)
-            loadData(sentenceSheetUrl, { header: false }) // Sheet 2 (sentence data)
+        const [practiceDataRaw, vocabDataRaw, sentenceDataRaw] = await Promise.all([
+            loadDataWithRetry(practiceSheetUrl, { header: true }), // Sheet 1 (assumed practice data)
+            loadDataWithRetry(vocabSheetUrl, { header: false }), // Sheet 1 (assumed vocab data)
+            loadDataWithRetry(sentenceSheetUrl, { header: false }) // Sheet 2 (sentence data)
         ]);
 
         // Renaming columns based on new structure: A=Skill, B=Theme, C=Question, D=Content
-        practice_allQuestions = practiceData.map(q => ({
+        practice_allQuestions = practiceDataRaw.map(q => ({
             Skill: q.Skill,
             Theme: q.Theme,
             Question: q.Question,
             Content: q.Content
         })).filter(q => q.Skill && q.Theme && q.Content);
-
 
         // --- VOCAB DATA PARSING (Sheet 1) ---
         vocab_vocabSets = {};
@@ -499,7 +519,7 @@ async function initializeApp() {
         let currentKey = null;
         let currentWords = [];
 
-        vocabData.forEach(row => {
+        vocabDataRaw.forEach(row => {
             if (!row || row.length < 5) return; 
 
             const themeInRow = row[0]?.trim(); // Col A
@@ -530,7 +550,7 @@ async function initializeApp() {
         let currentSKey = null;
         let currentSSentences = [];
 
-        sentenceData.forEach(row => {
+        sentenceDataRaw.forEach(row => {
             if (!row || row.length < 5) return; 
 
             const themeInRow = row[0]?.trim(); // Col A
@@ -568,8 +588,10 @@ async function initializeApp() {
     } catch (error) {
         console.error("Failed to load spreadsheet data:", error);
         document.querySelector('.container').innerHTML = `
-            <h1>Error</h1>
-            <p>Failed to load data from the spreadsheet. Please ensure the sheet with ID <strong>${SPREADSHEET_ID}</strong> is correctly <strong>"Published to the web"</strong> (File > Share > Publish to web).</p>
+            <h1>Error Loading Data</h1>
+            <p><strong>Failed to load data from the spreadsheet.</strong> This is usually because the publish link expired or needs a refresh.</p>
+            <p>Please ensure the sheet with ID <strong>${SPREADSHEET_ID}</strong> is correctly <strong>"Published to the web"</strong> (File > Share > Publish to web). You may need to <strong>Stop Publishing</strong> and then <strong>re-Publish</strong> to generate a fresh link.</p>
+            <p>Technical Details: ${error.message}</p>
         `;
     }
 }
