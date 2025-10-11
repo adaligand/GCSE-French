@@ -333,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.querySelector('.theme-choice-2').value = saved.choice2;
                 updateSelectedThemeForRow(row);
                 selectedThemeDropdown.value = saved.selected;
-                // MODIFIED/FIXED: This call was missing, causing the bug.
                 colorCodeSelectedTheme(selectedThemeDropdown);
                 row.querySelector('.ra-result').innerHTML = saved.ra; 
                 row.querySelector('.rp-result').innerHTML = saved.rp; 
@@ -407,13 +406,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
     }
 
+    // MODIFIED/FIXED: Reworked the entire function for the new, non-destructive logic
     autoAllocateBtn.addEventListener('click', () => {
-        if (allocationTableBody.querySelector('.ra-result span')) {
-            if (!confirm("This will overwrite existing card allocations. Are you sure you want to continue?")) {
-                return;
-            }
-        }
-
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
         allocationError.style.display = 'none';
 
@@ -425,13 +419,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
-        for (const row of rows) {
-            if (!row.querySelector('.selected-theme').value) {
-                allocationError.textContent = `Error: Please select a final theme for all students. ${row.cells[2].textContent} is missing a selection.`;
-                allocationError.style.display = 'block'; return;
-            }
-        }
+        
+        // 1. Prime the counters with already allocated cards
         rows.forEach(row => {
+            const tier = row.cells[1].textContent.trim().toUpperCase();
+            if (tier !== 'H' && tier !== 'F') return;
+
+            const raSpan = row.querySelector('.ra-result span');
+            if (raSpan) {
+                const raNum = raSpan.textContent.match(/\d+/)[0];
+                if(raNum) counters[tier].ra[raNum]++;
+            }
+
+            const rpSpan = row.querySelector('.rp-result span');
+            if (rpSpan) {
+                const rpNum = rpSpan.textContent.match(/\d+/)[0];
+                if(rpNum) counters[tier].rp[rpNum]++;
+            }
+
+            const ptSpan = row.querySelector('.photo-result span');
+            if (ptSpan) {
+                const ptNum = ptSpan.textContent.match(/\d+/)[0];
+                if(ptNum) {
+                    const themeForPt = getThemeFromPhoto(ptNum);
+                    counters[tier].photo[themeForPt]++;
+                }
+            }
+        });
+
+        // 2. Allocate cards only for students who need them
+        let allocationsMade = 0;
+        rows.forEach(row => {
+            const hasSelectedTheme = !!row.querySelector('.selected-theme').value;
+            const hasCards = !!row.querySelector('.ra-result span');
+
+            // Skip if no theme is selected or cards are already allocated
+            if (!hasSelectedTheme || hasCards) {
+                return;
+            }
+
             const tier = row.cells[1].textContent.trim().toUpperCase();
             if (tier !== 'H' && tier !== 'F') return;
 
@@ -463,7 +489,13 @@ document.addEventListener('DOMContentLoaded', () => {
             applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, rpThemeMap, tier);
             applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, rpThemeMap, tier);
             applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, rpThemeMap, tier);
+            allocationsMade++;
         });
+
+        if (allocationsMade === 0) {
+            allocationError.textContent = 'No new students to allocate. Ensure students have a selected theme and do not already have cards.';
+            allocationError.style.display = 'block';
+        }
     });
 
     exportExcelBtn.addEventListener('click', exportToExcel);
