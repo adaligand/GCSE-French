@@ -335,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedThemeDropdown.value = saved.selected;
                 colorCodeSelectedTheme(selectedThemeDropdown);
                 
-                // MODIFIED/FIXED: Check if the tier has changed. If it has, clear the cards.
                 const newTier = row.cells[1].textContent.trim().toUpperCase();
                 if (newTier === saved.tier.toUpperCase()) {
                     row.querySelector('.ra-result').innerHTML = saved.ra; 
@@ -396,7 +395,14 @@ document.addEventListener('DOMContentLoaded', () => {
         allocationTableBody.querySelectorAll('tr').forEach(row => {
             row.querySelector('.theme-choice-1').addEventListener('change', () => updateSelectedThemeForRow(row));
             row.querySelector('.theme-choice-2').addEventListener('change', () => updateSelectedThemeForRow(row));
-            row.querySelector('.selected-theme').addEventListener('change', (e) => colorCodeSelectedTheme(e.target));
+            
+            // MODIFIED/FIXED: When a new theme is selected, clear the old cards.
+            row.querySelector('.selected-theme').addEventListener('change', (e) => {
+                colorCodeSelectedTheme(e.target);
+                row.querySelector('.ra-result').innerHTML = '';
+                row.querySelector('.rp-result').innerHTML = '';
+                row.querySelector('.photo-result').innerHTML = '';
+            });
 
             const tierCell = row.cells[1];
             let initialTierValue = '';
