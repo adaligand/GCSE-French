@@ -82,9 +82,8 @@
              <div class="controls">
                 <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE ALL CARDS</button>
                 <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
-                <button id="export-csv-btn" class="export-btn">📄 Export Table to CSV</button>
              </div>
-             <div class="alert" id="allocation-error"></div>
+            <div class="alert" id="allocation-error"></div>
             <div style="overflow-x:auto;">
                 <table id="allocation-table">
                     <thead>
@@ -111,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editStudentListBtn = document.getElementById('edit-student-list-btn');
     const autoAllocateBtn = document.getElementById('auto-allocate-btn');
     const clearStorageBtn = document.getElementById('clear-storage-btn');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
     const exportExcelBtn = document.getElementById('export-excel-btn'); 
     const saveToFileBtn = document.getElementById('save-to-file-btn'); 
     const loadFromFileInput = document.getElementById('load-from-file-input'); 
@@ -135,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const state = { rpConfig: {}, students: [], rpLocked: lockConfigBtn.disabled, studentsImported: !!allocationTableBody.innerHTML };
         for (let i = 1; i <= 6; i++) state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
         
-        // Only try to read table data if the table exists
         if (allocationTableBody.innerHTML) {
             allocationTableBody.querySelectorAll('tr').forEach(row => {
                 state.students.push({
@@ -178,50 +175,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function exportToCSV() {
-        const headers = ["Student Name", "Choice 1", "Choice 2", "Selected", "Read Aloud (RA)", "Role Play (RP)", "Photo Card (PT)"];
-        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
-        allocationTableBody.querySelectorAll('tr').forEach(row => {
-            const rowData = [`"${row.cells[0].textContent}"`, `"${row.querySelector('.theme-choice-1').value}"`, `"${row.querySelector('.theme-choice-2').value}"`, `"${row.querySelector('.selected-theme').value}"`, `"${row.querySelector('.ra-result span')?.textContent || ''}"`, `"${row.querySelector('.rp-result span')?.textContent || ''}"`, `"${row.querySelector('.photo-result span')?.textContent || ''}"`];
-            csvContent += rowData.join(",") + "\n";
-        });
-        const link = document.createElement("a");
-        link.setAttribute("href", encodeURI(csvContent));
-        link.setAttribute("download", "speaking_exam_allocations.csv");
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    }
+    // REMOVED: The exportToCSV function is no longer needed.
     
     function exportToExcel() {
         const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
         const table = document.getElementById('allocation-table');
-        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid #777;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${table.innerHTML}</table></body></html>`;
         
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = tableHTML;
+        // Create a deep clone of the table to modify for export
+        const tableClone = table.cloneNode(true);
 
-        tempDiv.querySelectorAll('.result span').forEach(span => {
+        // Process the cloned table
+        tableClone.querySelectorAll('.result span').forEach(span => {
             const parentCell = span.parentElement;
             for (const className in themeColors) {
                 if (span.classList.contains(className)) {
                     parentCell.style.backgroundColor = themeColors[className];
                     parentCell.style.fontWeight = 'bold';
-                    parentCell.textContent = span.textContent;
+                    parentCell.textContent = span.textContent; // Replace span with text
                     break;
                 }
             }
         });
         
-        tempDiv.querySelectorAll('select').forEach(select => {
+        // MODIFIED/FIXED: Use the select's value to get the theme name, which is more reliable.
+        tableClone.querySelectorAll('select').forEach(select => {
             const parentCell = select.parentElement;
-            const selectedText = select.options[select.selectedIndex]?.text || '';
-            parentCell.textContent = selectedText.split(': ')[1] || selectedText;
+            const selectedValue = select.value;
+            if (selectedValue && THEMES[selectedValue]) {
+                parentCell.textContent = THEMES[selectedValue]; // e.g., "Neighbourhood"
+            } else {
+                // For placeholders like 'Select...' or '-'
+                parentCell.textContent = select.options[select.selectedIndex]?.text.split(': ')[1] || select.options[select.selectedIndex]?.text || '';
+            }
         });
 
-        tempDiv.querySelectorAll('.student-name').forEach(cell => {
+        tableClone.querySelectorAll('.student-name').forEach(cell => {
              cell.textContent = cell.textContent;
         });
 
-        const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tempDiv.innerHTML)));
+        // Generate the final HTML string for the file
+        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid #777;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
+
+        const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tableHTML)));
         const link = document.createElement("a");
         link.href = dataUri;
         link.download = "speaking_exam_allocations.xls";
@@ -230,9 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(link);
     }
 
-    // MODIFIED: This function now saves state to the browser AND triggers a file download.
     function saveAllocationToFile() {
-        saveState(); // First, save progress to the browser (localStorage)
+        saveState(); 
         const stateString = localStorage.getItem(STORAGE_KEY);
         if (!stateString) {
             alert("No data to save.");
@@ -256,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const content = e.target.result;
             try {
                 const parsed = JSON.parse(content);
-                if (parsed.rpConfig) { // Only needs to validate the core part
+                if (parsed.rpConfig) {
                      if (confirm("This will overwrite your current progress. Are you sure you want to load this file?")) {
                         localStorage.setItem(STORAGE_KEY, content);
                         window.location.reload();
@@ -390,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Event Listeners
-    exportCsvBtn.addEventListener('click', exportToCSV);
     exportExcelBtn.addEventListener('click', exportToExcel);
     saveToFileBtn.addEventListener('click', saveAllocationToFile);
     loadFromFileInput.addEventListener('change', loadAllocationFromFile);
