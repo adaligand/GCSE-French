@@ -158,67 +158,36 @@
     .answer-cell span.visible { visibility: visible; }
 
     /* --- PRINT --- */
-    @media print {
-        /* Set page to landscape and adjust margins */
-        @page { size: A4 landscape; margin: 1cm; }
-        
-        /* Hide all user interface elements */
-        .container, #main-menu, #practice-section, #vocab-controls-panel { display: none !important; }
-        
-        /* Show only the vocab section for printing */
-        #vocab-section { 
-            display: block !important; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            padding: 0; 
-            margin: 0;
-        }
+  @media print {
+    body * { visibility: hidden; } /* Hide everything else */
+    #vocab-print-area, #vocab-print-area * { visibility: visible; }
 
-        /* --- Quiz Grid Styling --- */
-        #vocab-test-container {
-            /* KEY FIX: Forces display even if it has the .hide class */
-            display: block !important; 
-            width: 100%;
-            /* Suggests a two-column print layout */
-            column-count: 2;
-            column-gap: 20px;
-        }
-
-        /* Apply table styling for print */
-        #vocab-test-container table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11pt; 
-            page-break-inside: avoid; 
-            margin-bottom: 20px;
-            table-layout: fixed;
-        }
-        
-        #vocab-test-container th, #vocab-test-container td { 
-            border: 1px solid #000; 
-            padding: 5px 8px; 
-            line-height: 1.2; 
-        }
-
-        /* Ensure column widths are maintained in print */
-        #vocab-test-container th:first-child,
-        #vocab-test-container td.num-cell {
-            width: 50px; /* slightly smaller for print */
-        }
-        #vocab-test-container th:nth-child(2),
-        #vocab-test-container td:nth-child(2),
-        #vocab-test-container th:nth-child(3),
-        #vocab-test-container td:nth-child(3) {
-            width: calc(50% - 25px); /* Adjusted for the 50px number column */
-        }
-        
-        /* Ensure answers are hidden for the blank quiz printout */
-        .answer-cell span { 
-            visibility: hidden !important; 
-        }
+    #vocab-print-area {
+        display: flex;
+        gap: 20px;
+        width: 100%;
+        padding: 0;
+        margin: 0;
     }
+
+    #vocab-print-area > div {
+        flex: 1; /* Each copy takes half page */
+    }
+
+    #vocab-print-area table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11pt;
+    }
+
+    #vocab-print-area th, #vocab-print-area td {
+        border: 1px solid #000;
+        padding: 5px 8px;
+    }
+
+    .answer-cell span { visibility: hidden !important; }
+}
+
   </style>
 </head>
 <body>
@@ -641,15 +610,24 @@ function vocab_revealAnswers() {
 }
 
 function vocab_generatePrintVersion() {
-    // Rely entirely on the @media print CSS block to control what is visible.
-    
-    vocab_printArea.classList.add('hide'); 
-    
-    document.title = "Vocabulary Test - Print Version";
+    // Clone the table into two copies side by side
+    const tableHtml = vocab_testContainer.innerHTML;
 
+    vocab_printArea.innerHTML = `
+        <div>${tableHtml}</div>
+        <div>${tableHtml}</div>
+    `;
+
+    vocab_printArea.classList.remove('hide'); 
+    vocab_testContainer.classList.add('hide');
+
+    document.title = "Vocabulary Test - Print Version";
     window.print();
-    
     document.title = "Language Practice Hub";
+
+    // Restore visibility after printing
+    vocab_printArea.classList.add('hide'); 
+    vocab_testContainer.classList.remove('hide');
 }
 
 // --- Start the App ---
