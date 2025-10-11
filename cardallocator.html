@@ -40,21 +40,9 @@
         .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
         .theme-color-1 { background-color: #aed6f1; } .theme-color-2 { background-color: #a2d9ab; } .theme-color-3 { background-color: #f7dc6f; } .theme-color-4 { background-color: #d2b4de; } .theme-color-5 { background-color: #f1948a; } .theme-color-6 { background-color: #dfdfdf; }
         
-        /* MODIFIED/FIXED: Added new styles for the RP config layout */
-        .rp-config-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .rp-config-item label {
-            display: inline-block;
-            margin-bottom: 0;
-            flex-shrink: 0; /* Prevents the label text from wrapping */
-        }
-        .rp-config-item select {
-            width: auto;
-            flex-grow: 1; /* Allows the dropdown to fill the remaining space */
-        }
+        .rp-config-item { display: flex; align-items: center; gap: 10px; }
+        .rp-config-item label { display: inline-block; margin-bottom: 0; flex-shrink: 0; }
+        .rp-config-item select { width: auto; flex-grow: 1; }
     </style>
 </head>
 <body>
@@ -80,7 +68,7 @@
                 <h2>Step 2: Configure RP Themes</h2>
                 <div class="rp-grid-3x2" id="rp-config-grid"></div>
                 <div class="controls" style="margin-top: 20px;">
-                    <button id="lock-config-btn" class="setup-action-btn">Lock RP Themes</button>
+                    <button id="lock-config-btn" class="setup-action-btn">Lock Config</button>
                 </div>
             </div>
 
@@ -121,7 +109,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const THEMES = { 1: "1- Personal world", 2: "2- Lifestyle", 3: "3- Neighbourhood", 4: "4- Media & Tech", 5: "5- Study & future", 6: "6- Travel and Tourism" };
+    // MODIFIED: Theme names now include the number prefix
+    const THEMES = { 1: "1 - Personal world", 2: "2 - Lifestyle", 3: "3 - Neighbourhood", 4: "4 - Media & Tech", 5: "5 - Study & future", 6: "6 - Travel and Tourism" };
 
     const lockConfigBtn = document.getElementById('lock-config-btn');
     const editConfigBtn = document.getElementById('edit-config-btn');
@@ -142,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const getThemeFromPhoto = (photoNum) => Math.floor((parseInt(photoNum) - 1) / 3) + 1;
     const getThemeFromRa = (raNum) => parseInt(raNum);
 
+    // MODIFIED: Uses the full theme name from the constant
     function initializeStudiedThemes() {
         const grid = document.getElementById('studied-themes-grid');
         grid.innerHTML = Object.entries(THEMES).map(([num, name]) => 
@@ -149,10 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ).join('');
     }
 
-    // MODIFIED/FIXED: Added a class to the container div
+    // MODIFIED: Uses the full theme name from the constant
     function initializeRpConfig() {
         const rpConfigGrid = document.getElementById('rp-config-grid');
-        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('')}</select></div>`).join('');
+        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
     }
     
     function buildStateObject() {
@@ -191,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
             for (let i = 1; i <= 6; i++) document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
-            document.querySelectorAll('#rp-config-grid select').forEach(s => s.disabled = state.rpLocked);
+            document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(s => s.disabled = state.rpLocked);
             lockConfigBtn.disabled = state.rpLocked;
         }
 
@@ -469,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // MODIFIED: Uses the full theme name from the constant
     function updateSelectedThemeForRow(row) {
         const val1 = row.cells[3].dataset.themeId;
         const val2 = row.cells[4].dataset.themeId;
@@ -479,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         colorCodeSelectedTheme(selected);
 
         if (val1 && val2 && val1 !== val2) {
-            selected.innerHTML = `<option value="">Select...</option><option value="${val1}">${val1}: ${THEMES[val1]}</option><option value="${val2}">${val2}: ${THEMES[val2]}</option>`;
+            selected.innerHTML = `<option value="">Select...</option><option value="${val1}">${THEMES[val1]}</option><option value="${val2}">${THEMES[val2]}</option>`;
             selected.disabled = false;
         }
     }
