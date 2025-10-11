@@ -371,6 +371,7 @@ function practice_populateTopics() {
     });
 }
 
+// MODIFIED: This function now builds a clean, reliable URL to prevent access errors.
 function practice_generateQuestion() {
     const topic = practice_topicSelect.value;
     const type = currentPracticeTypeInput.value;
@@ -383,28 +384,34 @@ function practice_generateQuestion() {
         practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
         return;
     }
-    
+
     const q = questions[Math.floor(Math.random() * questions.length)];
     let contentHtml = q.Content;
     const originalUrl = q.Content;
 
     if (originalUrl && originalUrl.includes('google.com/presentation')) {
-        let embedUrl = originalUrl
-            .replace('/edit', '/embed?start=false&loop=false')
-            .replace('/present', '/embed?start=false&loop=false')
-            .replace('#slide=', '&slide=');
+        // Reliably extract the File ID and Slide ID using regular expressions
+        const fileIdMatch = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        const slideIdMatch = originalUrl.match(/#slide=id\.([a-zA-Z0-9_.-]+)/);
 
-        contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
-        
-        let presentUrl = originalUrl.replace('/edit', '/present');
-        
-        fullscreenBtn.classList.remove('hide');
-        fullscreenBtn.onclick = () => { window.open(presentUrl, '_blank'); };
+        if (fileIdMatch && slideIdMatch) {
+            const fileId = fileIdMatch[1];
+            const slideId = `id.${slideIdMatch[1]}`; // Reconstruct the full slide ID
+
+            // Build a perfect embed URL from scratch
+            const embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
+            contentHtml = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
+            
+            // Build a perfect present URL for the fullscreen button
+            const presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
+            
+            fullscreenBtn.classList.remove('hide');
+            fullscreenBtn.onclick = () => { window.open(presentUrl, '_blank'); };
+        }
     }
     
     practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${contentHtml}`;
 }
-
 
 // --- Vocabulary Section Logic ---
 const vocab_themeMap = {
@@ -428,6 +435,7 @@ function vocab_initializeSelectors() {
     vocab_updateSetDropdown();
 }
 
+// MODIFIED: This function now correctly extracts topic names, even if they contain dots.
 function vocab_updateSetDropdown() {
     const theme = vocab_themeSelect.value;
     vocab_setSelect.innerHTML = '';
@@ -444,16 +452,15 @@ function vocab_updateSetDropdown() {
     sets.sort().forEach(setName => {
         const opt1 = document.createElement('option');
         opt1.value = setName;
-        opt1.textContent = `${setName.split('.')[1]} (${vocab_vocabSets[setName].length} words)`;
+        
+        // This is the corrected part. It finds the first '.' and takes the rest of the string.
+        const topicName = setName.substring(setName.indexOf('.') + 1);
+        
+        opt1.textContent = `${topicName} (${vocab_vocabSets[setName].length} words)`;
         vocab_setSelect.appendChild(opt1);
         vocab_setSelect2.appendChild(opt1.cloneNode(true));
     });
 }
-
-vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
-vocab_generateBtn.addEventListener('click', vocab_generateTest);
-vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
-document.getElementById('vocab-print-btn').addEventListener('click', vocab_generatePrintVersion);
 
 function vocab_generateTest() {
     const set1 = vocab_setSelect.value;
