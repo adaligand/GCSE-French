@@ -14,7 +14,21 @@
         label { font-weight: 600; margin-bottom: 5px; display: block; }
         select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        button, .action-btn-label { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; box-sizing: border-box; display: inline-block; vertical-align: middle; }
+        /* MODIFIED/FIXED: Normalized font properties to ensure consistent height between button and label elements */
+        button, .action-btn-label {
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-sizing: border-box;
+            font-family: inherit; /* Ensures both elements use the same font */
+            line-height: 1.5; /* Normalizes the line height */
+        }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
         .action-btn { background-color: #28a745; }
         .action-btn:hover { background-color: #218838; }
@@ -180,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // MODIFIED: Reworked for robustness and to fix bugs
     function exportToExcel() {
         const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
         const table = document.getElementById('allocation-table');
@@ -191,7 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalRow = originalRows[index];
             if (!originalRow) return;
 
-            // Process dropdown cells (Choices 1, 2, and Selected)
             originalRow.querySelectorAll('select').forEach(select => {
                 const cellIndex = select.parentElement.cellIndex;
                 const clonedCell = clonedRow.cells[cellIndex];
@@ -203,13 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     clonedCell.textContent = '';
                 }
 
-                // Color the 'Selected Theme' cell
                 if (select.classList.contains('selected-theme') && selectedValue) {
                     clonedCell.style.backgroundColor = themeColors[`theme-color-${selectedValue}`];
                 }
             });
 
-            // Process result cells (RA, RP, PT)
             originalRow.querySelectorAll('.result').forEach(resultCell => {
                 const cellIndex = resultCell.cellIndex;
                 const clonedCell = clonedRow.cells[cellIndex];
@@ -217,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (span) {
                     clonedCell.textContent = span.textContent;
-                    // Find theme class and apply color
                     for (const className of span.classList) {
                         if (className.startsWith('theme-color-')) {
                             clonedCell.style.backgroundColor = themeColors[className];
@@ -301,7 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
-        // MODIFIED: Handle three-column paste
         const lines = document.getElementById('student-names-input').value.trim().split('\n');
         const studentData = lines.map(line => {
             const parts = line.split('\t');
@@ -363,7 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
             const name = row.cells[1].textContent.trim();
-            // Note: This reconstructs the name as a single column.
             return `${examNumber}\t${name}`;
         }).join('\n');
         document.getElementById('student-names-input').value = currentData;
