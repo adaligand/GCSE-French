@@ -241,7 +241,218 @@
 </div>
 
 <script>
-/* JS identical to previous fixed version — omitted for brevity since functionality unchanged */
+const practiceSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvNFlHDx-4cZbDzwKy5Yb_DKeSxS2wSXxyX1Ua6pGcf27yFjmqOPz9jQ_rzoV3-zoZI9lw4EIfmdXH/pub?output=csv";
+const vocabSheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSCNeq329ih6SxLZ2TowPzpk61gJLFy-UAVAb8ivBs9DNEOdmtRQ29bWh__n53MdE-C8hs_XOV3iIkT/pub?output=csv";
+
+// --- NAVIGATION ---
+const mainMenu = document.getElementById('main-menu');
+const practiceSection = document.getElementById('practice-section');
+const vocabSection = document.getElementById('vocab-section');
+const currentPracticeTypeInput = document.getElementById('current-practice-type');
+
+document.getElementById('reading-btn').addEventListener('click', () => showPractice('Reading'));
+document.getElementById('listening-btn').addEventListener('click', () => showPractice('Listening'));
+document.getElementById('vocab-btn').addEventListener('click', showVocabTest);
+document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
+
+function showMainMenu() {
+  mainMenu.classList.remove('hide');
+  practiceSection.classList.add('hide');
+  vocabSection.classList.add('hide');
+}
+function showPractice(type) {
+  mainMenu.classList.add('hide');
+  practiceSection.classList.remove('hide');
+  vocabSection.classList.add('hide');
+  document.getElementById('practice-title').textContent = `${type} Practice`;
+  currentPracticeTypeInput.value = type;
+  practice_populateTopics();
+}
+function showVocabTest() {
+  mainMenu.classList.add('hide');
+  practiceSection.classList.add('hide');
+  vocabSection.classList.remove('hide');
+  vocab_initializeSelectors();
+}
+
+// --- PRACTICE SECTION ---
+let practice_allQuestions = [];
+const practice_topicSelect = document.getElementById('topic-select');
+const practice_generateBtn = document.getElementById('generate-practice-btn');
+const practice_questionDisplay = document.getElementById('question-display');
+
+practice_generateBtn.addEventListener('click', practice_generateQuestion);
+
+function loadPracticeData() {
+  Papa.parse(practiceSheetUrl, {
+    download: true, header: true, skipEmptyLines: true,
+    complete: (results) => {
+      practice_allQuestions = results.data
+        .filter(q => q.Skill && q.Topic && q.Content)
+        .map(q => ({
+          Skill: q.Skill.trim(),
+          Topic: q.Topic.trim(),
+          Content: q.Content.trim()
+        }));
+    },
+    error: () => {
+      practice_questionDisplay.innerHTML = `<p>Error loading practice data.</p>`;
+    }
+  });
+}
+
+function practice_populateTopics() {
+  const selectedType = currentPracticeTypeInput.value;
+  const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
+  practice_topicSelect.innerHTML = '';
+  if (topics.length === 0) {
+    practice_topicSelect.innerHTML = `<option>No Topics Available</option>`;
+    return;
+  }
+  topics.sort().forEach(topic => {
+    const opt = document.createElement('option');
+    opt.value = topic;
+    opt.textContent = topic;
+    practice_topicSelect.appendChild(opt);
+  });
+}
+
+function practice_generateQuestion() {
+  const topic = practice_topicSelect.value;
+  const type = currentPracticeTypeInput.value;
+  const questions = practice_allQuestions.filter(q => q.Skill === type && q.Topic === topic);
+  if (questions.length === 0) {
+    practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
+    return;
+  }
+  const q = questions[Math.floor(Math.random() * questions.length)];
+  let content = q.Content;
+
+  if (content.includes('google.com/presentation')) {
+    const fileId = content.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+    if (fileId) {
+      content = `
+        <iframe src="https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false" allowfullscreen></iframe>
+        <button onclick="window.open('https://docs.google.com/presentation/d/${fileId}/present','_blank')" class="btn-primary" style="margin-top:15px;">🔈 Open Full Screen</button>
+      `;
+    }
+  }
+  practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${content}`;
+}
+
+// --- VOCAB SECTION ---
+let vocab_vocabSets = {};
+const vocab_themeSelect = document.getElementById('vocab-theme-select');
+const vocab_setSelect = document.getElementById('vocab-set-select');
+const vocab_setSelect2 = document.getElementById('vocab-set-select-2');
+const vocab_generateBtn = document.getElementById('vocab-generate-btn');
+const vocab_testContainer = document.getElementById('vocab-test-container');
+const vocab_testBody = document.getElementById('vocab-test-body');
+const vocab_testControls = document.getElementById('vocab-test-controls');
+const vocab_revealBtn = document.getElementById('vocab-reveal-btn');
+const vocab_printArea = document.getElementById('vocab-print-area');
+
+const vocab_themeMap = {
+  '1': '1-Personal world',
+  '2': '2-Lifestyle',
+  '3': '3-Neighbourhood',
+  '4': '4-Media & Tech',
+  '5': '5-Study & future',
+  '6': '6-Travel and Tourism'
+};
+
+function loadVocabData() {
+  Papa.parse(vocabSheetUrl, {
+    download: true, header: false, skipEmptyLines: true,
+    complete: (results) => {
+      vocab_vocabSets = {};
+      results.data.forEach(row => {
+        const theme = row[0]?.trim();
+        const set = row[1]?.trim();
+        const target = row[3]?.trim();
+        const english = row[4]?.trim();
+        if (theme && set && target && english) {
+          const key = `${theme}.${set}`;
+          if (!vocab_vocabSets[key]) vocab_vocabSets[key] = [];
+          vocab_vocabSets[key].push({ target, english });
+        }
+      });
+      vocab_initializeSelectors();
+    },
+    error: () => alert("Error loading vocab data.")
+  });
+}
+
+function vocab_initializeSelectors() {
+  const themes = [...new Set(Object.keys(vocab_vocabSets).map(k => k.split('.')[0]))];
+  vocab_themeSelect.innerHTML = '';
+  themes.forEach(theme => {
+    const opt = document.createElement('option');
+    opt.value = theme;
+    opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`;
+    vocab_themeSelect.appendChild(opt);
+  });
+  vocab_updateSetDropdown();
+}
+
+function vocab_updateSetDropdown() {
+  const theme = vocab_themeSelect.value;
+  vocab_setSelect.innerHTML = '';
+  vocab_setSelect2.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '-- None --';
+  vocab_setSelect2.appendChild(none);
+
+  const sets = Object.keys(vocab_vocabSets).filter(k => k.startsWith(theme + '.'));
+  sets.forEach(setName => {
+    const opt1 = document.createElement('option');
+    opt1.value = setName;
+    opt1.textContent = `${setName} (${vocab_vocabSets[setName].length} words)`;
+    vocab_setSelect.appendChild(opt1);
+    vocab_setSelect2.appendChild(opt1.cloneNode(true));
+  });
+}
+
+vocab_themeSelect.addEventListener('change', vocab_updateSetDropdown);
+vocab_generateBtn.addEventListener('click', vocab_generateTest);
+vocab_revealBtn.addEventListener('click', vocab_revealAnswers);
+
+function vocab_generateTest() {
+  const set1 = vocab_setSelect.value;
+  const set2 = vocab_setSelect2.value;
+  if (!set1) return;
+  let combined = [...vocab_vocabSets[set1]];
+  if (set2 && set2 !== '') combined = combined.concat(vocab_vocabSets[set2]);
+  combined = Array.from(new Map(combined.map(i => [i.target, i])).values());
+  if (combined.length === 0) return;
+
+  const shuffled = combined.sort(() => 0.5 - Math.random());
+  vocab_testBody.innerHTML = '';
+  shuffled.forEach((item, i) => {
+    const row = vocab_testBody.insertRow();
+    row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span class="answer">${item.english}</span></td>`;
+  });
+
+  vocab_testContainer.classList.remove('hide');
+  vocab_testControls.classList.remove('hide');
+  vocab_printArea.classList.add('hide');
+  vocab_revealBtn.textContent = "Reveal Answers";
+}
+
+function vocab_revealAnswers() {
+  const answers = document.querySelectorAll('#vocab-test-container .answer');
+  const visible = answers[0]?.classList.contains('visible');
+  answers.forEach(a => a.classList.toggle('visible', !visible));
+  vocab_revealBtn.textContent = visible ? "Reveal Answers" : "Hide Answers";
+}
+
+// --- INITIALIZE ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadPracticeData();
+  loadVocabData();
+});
 </script>
+
 </body>
 </html>
