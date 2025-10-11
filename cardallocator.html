@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Speaking Card Allocator</title>
+    <title>GCSE Speaking Exam Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -42,7 +42,7 @@
 <body>
 
     <div class="container">
-        <h1>📋 GCSE Speaking Card Allocator</h1>
+        <h1>GCSE Speaking Exam Allocator 📋</h1>
         
         <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
@@ -76,7 +76,7 @@
             <div class="controls" style="margin-bottom: 20px;">
                 <button id="edit-config-btn" class="edit-btn">✏️ Edit RP Themes</button>
                 <button id="edit-student-list-btn" class="edit-btn" style="margin-left: 10px;">✏️ Edit Student List</button>
-                <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE</button>
+                <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE ALL CARDS</button>
                 <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
             </div>
             <div class="alert" id="allocation-error"></div>
@@ -224,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // MODIFIED/FIXED: Changed border color from #ccc to black
         let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:.5pt solid black;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
         const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tableHTML)));
         const link = document.createElement("a");
@@ -335,9 +334,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedThemeForRow(row);
                 selectedThemeDropdown.value = saved.selected;
                 colorCodeSelectedTheme(selectedThemeDropdown);
-                row.querySelector('.ra-result').innerHTML = saved.ra; 
-                row.querySelector('.rp-result').innerHTML = saved.rp; 
-                row.querySelector('.photo-result').innerHTML = saved.pt;
+                
+                // MODIFIED/FIXED: Check if the tier has changed. If it has, clear the cards.
+                const newTier = row.cells[1].textContent.trim().toUpperCase();
+                if (newTier === saved.tier.toUpperCase()) {
+                    row.querySelector('.ra-result').innerHTML = saved.ra; 
+                    row.querySelector('.rp-result').innerHTML = saved.rp; 
+                    row.querySelector('.photo-result').innerHTML = saved.pt;
+                }
             }
         });
 
