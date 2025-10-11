@@ -342,31 +342,23 @@
 </div>
 
 <script>
-// --- Configuration: Sheet ID and GID ---
-// SPREADSHEET ID from user's URL: 1eLph_Wxx7SM0aKnB1C0DqQQe9jkEorBe08-DeehtKqU
+// --- Configuration: Primary Sheet ID and GID (for Reading/Vocab) ---
+// This ID is for the sheet containing Reading/Listening/Vocab data (assumed to be the previous sheet).
 const SPREADSHEET_ID = "1eLph_Wxx7SM0aKnB1C0DqQQe9jkEorBe08-DeehtKqU";
+const PRIMARY_SHEET_GID = "0";
 
-// GID for Sheet 2 (Sentence data): 1738846920
-const SENTENCE_SHEET_GID = "1738846920"; 
-
-// Base URL for exporting CSV data (requires the sheet to be "Published to the web")
+// Base URL for exporting CSV data from the PRIMARY sheet
 const BASE_EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?output=csv`;
+const primarySheetUrl = `${BASE_EXPORT_URL}&gid=${PRIMARY_SHEET_GID}`;
 
-// --- URLs for Data Sheets ---
-// Assumes Reading/Listening/Vocabulary data is on the default sheet (Sheet 1, GID 0)
-// If the sheet is correctly published, these URLs should work.
-const practiceSheetUrl = BASE_EXPORT_URL;
-const vocabSheetUrl = BASE_EXPORT_URL;
-
-// Sentence Sheet URL, explicitly targeting Sheet 2 using the GID
-const sentenceSheetUrl = `${BASE_EXPORT_URL}&gid=${SENTENCE_SHEET_GID}`;
-
+// --- Configuration: Sentence Sheet URL (Direct Public Export Link) ---
+// This is the new, separate sheet link provided by the user.
+const SENTENCE_EXPORT_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTeenmRJ1Gqolo-8KqU5A84PProbYHoY3SrXKFxFdzwf_FdmJnpfbpEf9KmbhqhQk17K6US_UOJg9/pub?output=csv";
 
 let practice_allQuestions = [];
 let vocab_vocabSets = {};
 let sentence_sentenceSets = {}; 
 
-// --- DOM Element References (same as before) ---
 const mainMenu = document.getElementById('main-menu');
 const practiceSection = document.getElementById('practice-section');
 const vocabSection = document.getElementById('vocab-section');
@@ -410,6 +402,7 @@ let currentSentenceData = {
     activityType: ''
 };
 
+
 // --- Navigation ---
 readingBtn.addEventListener('click', () => showPractice('Reading'));
 listeningBtn.addEventListener('click', () => showPractice('Listening'));
@@ -422,7 +415,6 @@ function showMainMenu() {
     practiceSection.classList.add('hide');
     vocabSection.classList.add('hide');
     sentenceSection.classList.add('hide');
-    // Ensure only the main menu is visible
     mainMenu.classList.remove('hide'); 
 }
 
@@ -458,8 +450,8 @@ function showSentencePractice() {
 }
 
 
-// --- Data Loading ---
-async function loadDataWithRetry(url, options, maxRetries = 3) {
+// --- Data Loading with Retry and Diagnostics ---
+async function loadDataWithRetry(url, options, sheetName, maxRetries = 3) {
     for (let i = 0; i < maxRetries; i++) {
         try {
             return await new Promise((resolve, reject) => {
@@ -468,9 +460,12 @@ async function loadDataWithRetry(url, options, maxRetries = 3) {
                     download: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        // Check if the data is likely an error message (like "Not Found")
-                        if (results.data.length === 1 && results.data[0].length === 1 && results.data[0][0].includes('Not Found')) {
-                            reject(new Error("Google Sheet CSV Not Found or Access Denied. Is it published to the web?"));
+                        console.log(`[DATA] Loaded data for ${sheetName}. Rows: ${results.data.length}.`, results.data[0]);
+                        
+                        // Enhanced Check for common Google Sheets export errors
+                        if (results.data.length === 1 && results.data[0].length === 1 && 
+                            (results.data[0][0].includes('Not Found') || results.data[0][0].includes('Access Denied') || results.data[0][0].includes('The page you requested could not be found'))) {
+                            reject(new Error(`Google Sheet CSV for ${sheetName} returned a Not Found/Access Denied error. Is the document fully published?`));
                             return;
                         }
                         resolve(results.data);
@@ -479,11 +474,11 @@ async function loadDataWithRetry(url, options, maxRetries = 3) {
                 });
             });
         } catch (error) {
-            console.warn(`Attempt ${i + 1} failed for ${url}:`, error.message);
+            console.warn(`[RETRY] Attempt ${i + 1} failed for ${sheetName} (${url}):`, error.message);
             if (i === maxRetries - 1) {
                 throw error; // Re-throw the error on the last attempt
             }
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff: 1s, 2s, 3s
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
         }
     }
 }
@@ -498,28 +493,32 @@ async function initializeApp() {
     sentenceBtn.textContent = 'Loading...';
 
     try {
-        // Fetch data from the single spreadsheet, using GID for Sheet 2 data
-        const [practiceDataRaw, vocabDataRaw, sentenceDataRaw] = await Promise.all([
-            loadDataWithRetry(practiceSheetUrl, { header: true }), // Sheet 1 (assumed practice data)
-            loadDataWithRetry(vocabSheetUrl, { header: false }), // Sheet 1 (assumed vocab data)
-            loadDataWithRetry(sentenceSheetUrl, { header: false }) // Sheet 2 (sentence data)
+        // Load Sheet 1 (Primary) and Sentence Sheet (New separate URL)
+        const [primaryDataHeader, primaryDataNoHeader, sentenceDataRaw] = await Promise.all([
+            // Load 1: Sheet 1 with Headers (for Practice filtering)
+            loadDataWithRetry(primarySheetUrl, { header: true }, 'Sheet 1 (Practice)'), 
+            // Load 2: Sheet 1 without Headers (for Vocab and Theme parsing)
+            loadDataWithRetry(primarySheetUrl, { header: false }, 'Sheet 1 (Vocab)'), 
+            // Load 3: New Sentence Sheet URL without Headers (for Sentences)
+            loadDataWithRetry(SENTENCE_EXPORT_URL, { header: false }, 'Sheet 2 (Sentences) - External URL') 
         ]);
 
-        // Renaming columns based on new structure: A=Skill, B=Theme, C=Question, D=Content
-        practice_allQuestions = practiceDataRaw.map(q => ({
+        // --- PRACTICE DATA PARSING (Sheet 1, with headers) ---
+        practice_allQuestions = primaryDataHeader.map(q => ({
             Skill: q.Skill,
             Theme: q.Theme,
             Question: q.Question,
             Content: q.Content
         })).filter(q => q.Skill && q.Theme && q.Content);
 
-        // --- VOCAB DATA PARSING (Sheet 1) ---
+        // --- VOCAB DATA PARSING (Sheet 1, without headers) ---
         vocab_vocabSets = {};
         let currentTheme = null; 
         let currentKey = null;
         let currentWords = [];
 
-        vocabDataRaw.forEach(row => {
+        // Skip the header row (index 0) since we used header: false, and data starts after headers
+        primaryDataNoHeader.slice(1).forEach(row => {
             if (!row || row.length < 5) return; 
 
             const themeInRow = row[0]?.trim(); // Col A
@@ -544,13 +543,14 @@ async function initializeApp() {
             vocab_vocabSets[currentKey] = currentWords;
         }
 
-        // --- SENTENCE DATA PARSING (Sheet 2) ---
+        // --- SENTENCE DATA PARSING (Sheet 2, without headers, A, B, D, E) ---
         sentence_sentenceSets = {};
         let currentSTheme = null; 
         let currentSKey = null;
         let currentSSentences = [];
 
-        sentenceDataRaw.forEach(row => {
+        // Assume data starts from the second row (index 1), consistent with no-header setting and primary sheet.
+        sentenceDataRaw.slice(1).forEach(row => {
             if (!row || row.length < 5) return; 
 
             const themeInRow = row[0]?.trim(); // Col A
@@ -576,6 +576,10 @@ async function initializeApp() {
             sentence_sentenceSets[currentSKey] = currentSSentences;
         }
         
+        console.log(`[SUMMARY] Practice/Reading Questions loaded: ${practice_allQuestions.length}`);
+        console.log(`[SUMMARY] Vocabulary Sets loaded: ${Object.keys(vocab_vocabSets).length}`);
+        console.log(`[SUMMARY] Sentence Sets loaded: ${Object.keys(sentence_sentenceSets).length}`);
+        
         vocab_initializeSelectors();
 
         readingBtn.disabled = false;
@@ -586,19 +590,18 @@ async function initializeApp() {
         sentenceBtn.textContent = 'Sentence Practice';
 
     } catch (error) {
-        console.error("Failed to load spreadsheet data:", error);
+        console.error("CRITICAL: Failed to load spreadsheet data.", error);
         document.querySelector('.container').innerHTML = `
             <h1>Error Loading Data</h1>
-            <p><strong>Failed to load data from the spreadsheet.</strong> This is usually because the publish link expired or needs a refresh.</p>
-            <p>Please ensure the sheet with ID <strong>${SPREADSHEET_ID}</strong> is correctly <strong>"Published to the web"</strong> (File > Share > Publish to web). You may need to <strong>Stop Publishing</strong> and then <strong>re-Publish</strong> to generate a fresh link.</p>
+            <p><strong>Failed to load data from the spreadsheet(s).</strong> The most likely cause is that a sheet's publishing link has expired or the sheet contents are being blocked.</p>
+            <p>Please ensure both your main sheet and your **Sentence Spreadsheet** are fully <strong>"Published to the web"</strong> (File > Share > Publish to web > **Entire Document**).</p>
+            <p>If the error persists, please check your browser's console (F12 > Console tab) for the full technical error.</p>
             <p>Technical Details: ${error.message}</p>
         `;
     }
 }
 
-// --- Practice Section Logic (Remains the same) ---
-practice_topicSelect.addEventListener('change', practice_populateQuestions);
-practice_generateBtn.addEventListener('click', practice_generateQuestion);
+// ... (All other functions remain the same) ...
 
 function practice_populateTopics() {
     const selectedType = currentPracticeTypeInput.value;
@@ -701,7 +704,11 @@ function practice_generateQuestion() {
     practice_questionDisplay.innerHTML = `<h2>${q.Question}</h2>${contentHtml}`;
 }
 
-// --- Vocabulary Section Logic (Remains the same) ---
+practice_topicSelect.addEventListener('change', practice_populateQuestions);
+practice_generateBtn.addEventListener('click', practice_generateQuestion);
+
+
+// --- Vocabulary Section Logic ---
 const vocab_themeMap = {
     '1': '1-Personal world',
     '2': '2-Lifestyle',
@@ -772,14 +779,14 @@ function vocab_generateTest() {
     
     vocab_testBody.innerHTML = '';
 
-    // Target -> English
+    // Target -> English (First 5 words)
     const targetFirstQuestions = shuffled.slice(0, 5);
     targetFirstQuestions.forEach((item, i) => {
         const row = vocab_testBody.insertRow();
         row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
     });
 
-    // English -> Target
+    // English -> Target (Next 5 words)
     const englishFirstQuestions = shuffled.slice(5, 10);
     englishFirstQuestions.forEach((item, i) => {
         const row = vocab_testBody.insertRow();
@@ -804,14 +811,16 @@ function vocab_generatePrintVersion() {
     document.title = "Language Practice Hub";
 }
 
-// --- Sentence Section Logic (Updated initialization using new GID) ---
+// --- Sentence Section Logic ---
 
 function sentence_initializeSelectors() {
+    // Only populate themes for the sentence sheet data
     const themes = [...new Set(Object.keys(sentence_sentenceSets).map(k => k.split('.')[0]))];
     sentence_themeSelect.innerHTML = '<option value="">-- Select Theme --</option>';
     themes.sort().forEach(theme => {
         const opt = document.createElement('option');
         opt.value = theme;
+        // Use the same theme map for display names
         opt.textContent = vocab_themeMap[theme] || `Theme ${theme}`; 
         sentence_themeSelect.appendChild(opt);
     });
@@ -908,8 +917,6 @@ function sentence_generateActivity() {
         if (type === 'consonants') return text.replace(consonants, '_');
         return text;
     };
-    // Underscore only letters and numbers
-    const underscoreText = (text) => text.replace(/[a-zA-ZáéíóúýÁÉÍÓÚÝéèàùâêîôûëïüÿæœçÉÈÀÙÂÊÎÔÛËÏÜŸÆŒÇ0-9]/g, '_');
 
 
     switch (activityType) {
