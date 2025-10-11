@@ -400,35 +400,52 @@ vocabBtn.addEventListener('click', showVocabTest);
 sentenceBtn.addEventListener('click', showSentencePractice); 
 document.querySelectorAll('.back-btn').forEach(btn => btn.addEventListener('click', showMainMenu));
 
-function showMainMenu() {
-    mainMenu.classList.remove('hide');
-    practiceSection.classList.add('hide');
-    vocabSection.classList.add('hide');
-    sentenceSection.classList.add('hide'); // HIDE sentence section
+/**
+ * Ensures all non-menu sections are hidden.
+ */
+function hideAllSections() {
+    practiceSection.classList.add('hide');
+    vocabSection.classList.add('hide');
+    sentenceSection.classList.add('hide');
 }
 
+/**
+ * Shows the main menu and hides all practice sections.
+ */
+function showMainMenu() {
+    hideAllSections();
+    mainMenu.classList.remove('hide');
+}
+
+/**
+ * Shows the reading/listening section.
+ */
 function showPractice(type) {
     mainMenu.classList.add('hide');
+    hideAllSections(); 
     practiceSection.classList.remove('hide');
-    vocabSection.classList.add('hide');
-    sentenceSection.classList.add('hide'); // HIDE sentence section
+
     document.getElementById('practice-title').textContent = `${type} Practice`;
     currentPracticeTypeInput.value = type;
     practice_populateTopics();
 }
 
+/**
+ * Shows the vocabulary test section.
+ */
 function showVocabTest() {
     mainMenu.classList.add('hide');
-    practiceSection.classList.add('hide');
+    hideAllSections(); 
     vocabSection.classList.remove('hide');
-    sentenceSection.classList.add('hide'); // HIDE sentence section
 }
 
+/**
+ * Shows the sentence practice section.
+ */
 function showSentencePractice() { 
     mainMenu.classList.add('hide');
-    practiceSection.classList.add('hide');
-    vocabSection.classList.add('hide');
-    sentenceSection.classList.remove('hide'); // SHOW sentence section
+    hideAllSections(); 
+    sentenceSection.classList.remove('hide'); 
 }
 
 // --- Data Loading ---
@@ -468,7 +485,7 @@ async function initializeApp() {
         })).filter(q => q.Skill && q.Theme && q.Content);
 
 
-        // Vocab Data Setup
+        // Vocab Data Setup (No change to logic)
         vocab_vocabSets = {};
         let currentTheme = null; 
         let currentKey = null;
@@ -503,9 +520,8 @@ async function initializeApp() {
             vocab_vocabSets[currentKey] = currentWords;
         }
         
-        // Sentence Data Setup
+        // Sentence Data Setup (No change to logic)
         sentence_sentences = sentenceData.map(row => {
-            // Assuming similar structure: Col A=Theme, Col B=Set, Col D=French, Col E=English
             if (!row || row.length < 5 || !row[0] || !row[3] || !row[4] || row[0].toLowerCase() === 'theme') return null;
             return {
                 Theme: row[0].trim(),
@@ -525,6 +541,9 @@ async function initializeApp() {
         sentenceBtn.disabled = false; 
         readingBtn.textContent = 'Reading Practice';
         sentenceBtn.textContent = 'Sentence Practice'; 
+
+        // Ensure only the main menu is visible on load
+        showMainMenu(); 
 
     } catch (error) {
         console.error("Failed to load spreadsheet data:", error);
@@ -743,7 +762,7 @@ function vocab_generatePrintVersion() {
     document.title = "Language Practice Hub";
 }
 
-// --- Sentence Section Logic (New) ---
+// --- Sentence Section Logic (Unchanged) ---
 
 const sentence_themeMap = vocab_themeMap; 
 
