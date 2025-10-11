@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GCSE starter Hub</title>
+  <title>Language Practice Hub</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -62,7 +62,7 @@
       cursor: pointer;
       padding: 12px 20px;
       transition: background-color 0.2s ease, transform 0.1s ease;
-      white-space: nowrap; /* Prevents button text from wrapping */
+      white-space: nowrap;
     }
     button:hover { transform: translateY(-2px); }
     .btn-primary { background-color: #2980b9; color: #fff; }
@@ -75,16 +75,17 @@
       background-color: #5a6268;
     }
 
-
     /* --- PRACTICE --- */
     .practice-controls {
       display: flex;
       gap: 15px;
       margin-bottom: 25px;
       align-items: flex-end;
+      flex-wrap: wrap; /* Allows wrapping on smaller screens */
     }
     .practice-control-group {
       flex-grow: 1;
+      min-width: 200px; /* Ensure selection boxes have a decent size */
       display: flex;
       flex-direction: column;
     }
@@ -132,20 +133,31 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 1.4em;
+      table-layout: fixed; /* FIX for equal column spreading */
     }
     #vocab-test-container th, #vocab-test-container td {
       border: 1px solid #ddd;
       padding: 12px;
       text-align: left;
     }
+    /* Column 1: Number (Fixed width) */
     #vocab-test-container th:first-child,
     #vocab-test-container td.num-cell {
       width: 60px;
       text-align: center;
     }
+    /* Column 2 & 3: Target and English (Equal width) */
+    #vocab-test-container th:nth-child(2),
+    #vocab-test-container td:nth-child(2),
+    #vocab-test-container th:nth-child(3),
+    #vocab-test-container td:nth-child(3) {
+      width: 47%; 
+    }
+
     .answer-cell span { visibility: hidden; color: #27ae60; font-weight: bold; }
     .answer-cell span.visible { visibility: visible; }
-/* --- PRINT --- */
+
+    /* --- PRINT --- */
     @media print {
         /* Set page to landscape and adjust margins */
         @page { size: A4 landscape; margin: 1cm; }
@@ -166,9 +178,10 @@
 
         /* --- Quiz Grid Styling --- */
         #vocab-test-container {
-            /* THIS IS THE KEY FIX: Forces display even if it has the .hide class */
+            /* KEY FIX: Forces display even if it has the .hide class */
             display: block !important; 
             width: 100%;
+            /* Suggests a two-column print layout */
             column-count: 2;
             column-gap: 20px;
         }
@@ -180,12 +193,25 @@
             font-size: 11pt; 
             page-break-inside: avoid; 
             margin-bottom: 20px;
+            table-layout: fixed;
         }
         
         #vocab-test-container th, #vocab-test-container td { 
             border: 1px solid #000; 
             padding: 5px 8px; 
             line-height: 1.2; 
+        }
+
+        /* Ensure column widths are maintained in print */
+        #vocab-test-container th:first-child,
+        #vocab-test-container td.num-cell {
+            width: 50px; /* slightly smaller for print */
+        }
+        #vocab-test-container th:nth-child(2),
+        #vocab-test-container td:nth-child(2),
+        #vocab-test-container th:nth-child(3),
+        #vocab-test-container td:nth-child(3) {
+            width: calc(50% - 25px); /* Adjusted for the 50px number column */
         }
         
         /* Ensure answers are hidden for the blank quiz printout */
@@ -212,16 +238,22 @@
     <input type="hidden" id="current-practice-type" value="">
     <div class="practice-controls">
       <div class="practice-control-group">
-        <label for="topic-select">Choose a Topic:</label>
-        <select id="topic-select"><option>Loading Topics...</option></select>
+        <label for="topic-select">Choose a Theme:</label>
+        <select id="topic-select"><option>Loading Themes...</option></select>
       </div>
-      <button id="generate-practice-btn" class="btn-primary">Generate Question</button>
+      <!-- NEW QUESTION SELECTOR -->
+      <div class="practice-control-group">
+        <label for="question-select">Choose a Question:</label>
+        <select id="question-select"><option>Select a Theme first...</option></select>
+      </div>
+      <!-- END NEW QUESTION SELECTOR -->
+      <button id="generate-practice-btn" class="btn-primary">Load Question</button>
       <button id="fullscreen-btn" class="btn-primary hide">🔈 Open Full Screen</button>
       <button class="btn-primary back-btn">Back to Main Menu</button>
     </div>
     <div id="question-display">
       <h2>Your question will appear here</h2>
-      <p>Select a topic and click "Generate Question".</p>
+      <p>Select a theme and question, then click "Load Question".</p>
     </div>
   </div>
 
@@ -269,8 +301,11 @@ const readingBtn = document.getElementById('reading-btn');
 const listeningBtn = document.getElementById('listening-btn');
 const vocabBtn = document.getElementById('vocab-btn');
 const currentPracticeTypeInput = document.getElementById('current-practice-type');
-const practice_topicSelect = document.getElementById('topic-select');
+
+const practice_topicSelect = document.getElementById('topic-select'); // Theme Selector
+const practice_questionSelect = document.getElementById('question-select'); // NEW Question Selector
 const practice_generateBtn = document.getElementById('generate-practice-btn');
+
 const practice_questionDisplay = document.getElementById('question-display');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 const vocab_themeSelect = document.getElementById('vocab-theme-select');
@@ -335,15 +370,22 @@ async function initializeApp() {
             loadData(vocabSheetUrl, { header: false })
         ]);
 
-        practice_allQuestions = practiceData.filter(q => q.Skill && q.Topic && q.Content);
+        // Renaming columns based on new structure: A=Skill, B=Theme, C=Question, D=Content
+        practice_allQuestions = practiceData.map(q => ({
+            Skill: q.Skill,
+            Theme: q.Theme,
+            Question: q.Question,
+            Content: q.Content
+        })).filter(q => q.Skill && q.Theme && q.Content);
+
 
         vocab_vocabSets = {};
-        let currentTheme = null; // Remembers the last theme seen
+        let currentTheme = null; 
         let currentKey = null;
         let currentWords = [];
 
         vocabData.forEach(row => {
-            if (!row || row.length < 5) return; // Safety check for malformed rows
+            if (!row || row.length < 5) return; 
 
             const themeInRow = row[0]?.trim();
             const set = row[1]?.trim();
@@ -385,45 +427,92 @@ async function initializeApp() {
 }
 
 // --- Practice Section Logic ---
+practice_topicSelect.addEventListener('change', practice_populateQuestions);
 practice_generateBtn.addEventListener('click', practice_generateQuestion);
 
 function practice_populateTopics() {
     const selectedType = currentPracticeTypeInput.value;
-    const topics = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Topic))];
-    practice_topicSelect.innerHTML = '';
-    if (topics.length === 0) {
-        practice_topicSelect.innerHTML = `<option>No Topics Available</option>`;
+    // Use column B: Theme
+    const themes = [...new Set(practice_allQuestions.filter(q => q.Skill === selectedType).map(q => q.Theme))]; 
+    
+    practice_topicSelect.innerHTML = '<option value="">-- Select Theme --</option>'; 
+    
+    if (themes.length === 0) {
+        practice_topicSelect.innerHTML = `<option>No Themes Available</option>`;
+        practice_questionSelect.innerHTML = `<option>Select a Theme first...</option>`;
         return;
     }
-    topics.sort().forEach(topic => {
+    themes.sort().forEach(theme => {
+        if (theme) { 
+            const opt = document.createElement('option');
+            opt.value = theme;
+            opt.textContent = theme;
+            practice_topicSelect.appendChild(opt);
+        }
+    });
+
+    // Automatically call the next step or reset the questions dropdown
+    practice_populateQuestions();
+}
+
+
+function practice_populateQuestions() {
+    const selectedTheme = practice_topicSelect.value;
+    const selectedType = currentPracticeTypeInput.value;
+    practice_questionSelect.innerHTML = '';
+    
+    if (!selectedTheme) {
+        practice_questionSelect.innerHTML = `<option>Select a Theme first...</option>`;
+        return;
+    }
+
+    // Filter questions based on both Skill (Col A) and Theme (Col B)
+    const questions = practice_allQuestions.filter(q => 
+        q.Skill === selectedType && q.Theme === selectedTheme
+    );
+
+    if (questions.length === 0) {
+        practice_questionSelect.innerHTML = `<option>No Questions Available</option>`;
+        return;
+    }
+    
+    questions.forEach((q, index) => {
         const opt = document.createElement('option');
-        opt.value = topic;
-        opt.textContent = topic;
-        practice_topicSelect.appendChild(opt);
+        // Store the full URL (Content - Col D) as the value
+        opt.value = q.Content; 
+        // Display the question (Col C)
+        opt.textContent = q.Question; 
+        practice_questionSelect.appendChild(opt);
     });
 }
 
 function practice_generateQuestion() {
-    const topic = practice_topicSelect.value;
-    const type = currentPracticeTypeInput.value;
-    const questions = practice_allQuestions.filter(q => q.Skill === type && q.Topic === topic);
-
-    fullscreenBtn.classList.add('hide');
-    fullscreenBtn.onclick = null;
-
-    if (questions.length === 0) {
-        practice_questionDisplay.innerHTML = `<p>No question found for this topic.</p>`;
+    const selectedContentUrl = practice_questionSelect.value;
+    
+    if (!selectedContentUrl) {
+        practice_questionDisplay.innerHTML = `<h2>Please select a Question.</h2><p>Please select a Theme first, then select a Question from the list.</p>`;
         return;
     }
 
-    const q = questions[Math.floor(Math.random() * questions.length)];
+    // Find the specific question object based on the Content URL
+    const q = practice_allQuestions.find(item => item.Content === selectedContentUrl);
+    
+    if (!q) {
+        practice_questionDisplay.innerHTML = `<p>Error: Content not found.</p>`;
+        return;
+    }
+    
+    fullscreenBtn.classList.add('hide');
+    fullscreenBtn.onclick = null;
+
     let contentHtml = q.Content;
     const originalUrl = q.Content;
 
+    // Slide/Embed Logic
     if (originalUrl && originalUrl.includes('google.com/presentation')) {
         const fileIdMatch = originalUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
         
-        // MODIFIED: This regex now looks for EITHER '?' or '#' before 'slide='
+        // Match either ?slide= or #slide=
         const slideIdMatch = originalUrl.match(/[?#]slide=id\.([a-zA-Z0-9_.-]+)/);
 
         if (fileIdMatch) {
@@ -432,10 +521,10 @@ function practice_generateQuestion() {
             let presentUrl;
 
             if (slideIdMatch) {
-                // A specific slide ID was found
+                // Specific slide ID found
                 const slideId = `id.${slideIdMatch[1]}`;
                 embedUrl = `https://docs.google.com/presentation/d/${fileId}/embed?start=false&loop=false&slide=${slideId}`;
-                // The presentation link format must use a hash for navigation
+                // Presentation link format must use a hash for navigation
                 presentUrl = `https://docs.google.com/presentation/d/${fileId}/present#slide=${slideId}`;
             } else {
                 // No slide ID, link to the start
@@ -450,7 +539,7 @@ function practice_generateQuestion() {
         }
     }
     
-    practice_questionDisplay.innerHTML = `<h2>${q.Topic}</h2>${contentHtml}`;
+    practice_questionDisplay.innerHTML = `<h2>${q.Question}</h2>${contentHtml}`;
 }
 
 // --- Vocabulary Section Logic ---
@@ -515,29 +604,28 @@ function vocab_generateTest() {
         combined = combined.concat(vocab_vocabSets[set2]);
     }
     
-    // De-duplicate and ensure we have words to work with
+    // De-duplicate
     let uniqueCombined = Array.from(new Map(combined.map(item => [item.target, item])).values());
     if (uniqueCombined.length === 0) return;
 
     // Shuffle the entire unique list once
     const shuffled = uniqueCombined.sort(() => 0.5 - Math.random());
     
-    // MODIFIED: Implement the 5+5 quiz logic
     vocab_testBody.innerHTML = '';
 
-    // Take the first 5 (or fewer) for Target -> English questions
+    // Take the first 5 (or fewer) for Target -> English questions (Column 2 is question, Column 3 is answer)
     const targetFirstQuestions = shuffled.slice(0, 5);
     targetFirstQuestions.forEach((item, i) => {
         const row = vocab_testBody.insertRow();
         row.innerHTML = `<td class="num-cell">${i + 1}</td><td>${item.target}</td><td class="answer-cell"><span>${item.english}</span></td>`;
     });
 
-    // Take the next 5 (or fewer, if the list is short) for English -> Target questions
+    // Take the next 5 (or fewer) for English -> Target questions (Column 3 is question, Column 2 is answer)
     const englishFirstQuestions = shuffled.slice(5, 10);
     englishFirstQuestions.forEach((item, i) => {
         const row = vocab_testBody.insertRow();
         const rowNumber = targetFirstQuestions.length + i + 1; // Continue numbering
-        // Swap the columns for the question format
+        // Swap the columns: English is displayed, Target is hidden in the answer cell
         row.innerHTML = `<td class="num-cell">${rowNumber}</td><td class="answer-cell"><span>${item.target}</span></td><td>${item.english}</td>`;
     });
     
@@ -553,21 +641,14 @@ function vocab_revealAnswers() {
 }
 
 function vocab_generatePrintVersion() {
-    // 1. Ensure the print area with the full list is hidden
+    // Rely entirely on the @media print CSS block to control what is visible.
+    
     vocab_printArea.classList.add('hide'); 
     
-    // 2. Hide the main container and show ONLY the vocab section for printing
-    // The existing CSS @media print block handles this, but we can ensure
-    // the table we want to print is visible just before printing.
-    vocab_testContainer.classList.remove('hide'); 
-
-    // 3. Set the print title (Optional but good for printouts)
     document.title = "Vocabulary Test - Print Version";
 
-    // 4. Open the print dialog
     window.print();
     
-    // 5. Restore the document title and any temporary display changes
     document.title = "Language Practice Hub";
 }
 
