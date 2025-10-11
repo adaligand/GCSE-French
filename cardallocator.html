@@ -561,10 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     autoAllocateBtn.addEventListener('click', () => {
-        if (!confirm("This will clear any existing card allocations and re-run the process for all students with a selected theme. Continue?")) {
-            return;
-        }
-
+       
         allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
 
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
