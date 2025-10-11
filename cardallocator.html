@@ -54,6 +54,8 @@
             <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
             <label for="load-from-file-input" class="action-btn-label setup-action-btn" style="margin-left: 10px;">📂 Load Allocation from File</label>
             <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
+            <button id="generate-table-btn" class="action-btn" style="margin-left: 10px;">Lock & Generate Table</button>
+            <button id="edit-config-btn" class="edit-btn" style="margin-left: 10px; display: none;">✏️ Edit Config & Students</button>
             <span id="save-confirm-msg" class="save-confirm">Progress Saved to File!</span>
             <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset Page</button>
         </div>
@@ -67,9 +69,6 @@
             <div class="section" id="setup-section">
                 <h2>Step 2: Configure RP Themes</h2>
                 <div class="rp-grid-3x2" id="rp-config-grid"></div>
-                <div class="controls" style="margin-top: 20px;">
-                    <button id="lock-config-btn" class="setup-action-btn">Lock Config</button>
-                </div>
             </div>
 
             <div class="section" id="student-import-section">
@@ -77,19 +76,19 @@
                 <div id="student-entry-wrapper">
                     <p>Paste from a spreadsheet or type, using Tab to separate columns (Exam Number, Tier, First Name, Last Name).</p>
                     <textarea id="student-names-input" placeholder="Paste or type data here..."></textarea>
-                    <button id="create-table-btn" class="setup-action-btn" style="margin-top: 10px;">Create Allocation Table</button>
                 </div>
             </div>
         </div>
 
         <div class="section" id="allocation-section" style="display: none;">
-            <h2>Step 4: Set Themes & Allocate Cards</h2>
-            <div class="controls" style="margin-bottom: 20px;">
-                <button id="edit-config-btn" class="edit-btn">✏️ Edit Config</button>
-                <button id="edit-student-list-btn" class="edit-btn" style="margin-left: 10px;">✏️ Edit Student List</button>
-                <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE</button>
-                <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
+                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">Step 4: Set Themes & Allocate Cards</h2>
+                <div>
+                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE</button>
+                    <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
+                </div>
             </div>
+            
             <div class="alert" id="allocation-error"></div>
             <div style="overflow-x:auto;">
                 <table id="allocation-table">
@@ -109,13 +108,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // MODIFIED: Theme names now include the number prefix
     const THEMES = { 1: "1 - Personal world", 2: "2 - Lifestyle", 3: "3 - Neighbourhood", 4: "4 - Media & Tech", 5: "5 - Study & future", 6: "6 - Travel and Tourism" };
 
-    const lockConfigBtn = document.getElementById('lock-config-btn');
+    const generateTableBtn = document.getElementById('generate-table-btn');
     const editConfigBtn = document.getElementById('edit-config-btn');
-    const createTableBtn = document.getElementById('create-table-btn');
-    const editStudentListBtn = document.getElementById('edit-student-list-btn');
     const autoAllocateBtn = document.getElementById('auto-allocate-btn');
     const clearDataBtn = document.getElementById('clear-data-btn');
     const exportExcelBtn = document.getElementById('export-excel-btn'); 
@@ -131,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const getThemeFromPhoto = (photoNum) => Math.floor((parseInt(photoNum) - 1) / 3) + 1;
     const getThemeFromRa = (raNum) => parseInt(raNum);
 
-    // MODIFIED: Uses the full theme name from the constant
     function initializeStudiedThemes() {
         const grid = document.getElementById('studied-themes-grid');
         grid.innerHTML = Object.entries(THEMES).map(([num, name]) => 
@@ -139,14 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ).join('');
     }
 
-    // MODIFIED: Uses the full theme name from the constant
     function initializeRpConfig() {
         const rpConfigGrid = document.getElementById('rp-config-grid');
         rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
     }
     
     function buildStateObject() {
-        const state = { rpConfig: {}, students: [], rpLocked: lockConfigBtn.disabled, studiedThemes: [] };
+        const state = { rpConfig: {}, students: [], rpLocked: allocationSection.style.display === 'block', studiedThemes: [] };
         for (let i = 1; i <= 6; i++) {
             state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
             if (document.getElementById(`studied-theme-${i}`).checked) {
@@ -178,13 +172,13 @@ document.addEventListener('DOMContentLoaded', () => {
         studentNamesInput.value = '';
         allocationSection.style.display = 'none';
         initialSetupWrapper.style.display = 'grid';
+        
+        generateTableBtn.style.display = 'inline-block';
+        editConfigBtn.style.display = 'none';
 
         if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
             for (let i = 1; i <= 6; i++) document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
-            document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(s => s.disabled = state.rpLocked);
-            lockConfigBtn.disabled = state.rpLocked;
         }
-
         if (state.studiedThemes && state.studiedThemes.length > 0) {
             for (let i = 1; i <= 6; i++) document.getElementById(`studied-theme-${i}`).checked = false;
             state.studiedThemes.forEach(themeNum => {
@@ -192,6 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (checkbox) checkbox.checked = true;
             });
         }
+        
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = state.rpLocked);
 
         if (state.students && state.students.length > 0) {
             allocationTableBody.innerHTML = state.students.map(s => {
@@ -225,6 +221,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             initialSetupWrapper.style.display = 'none';
             allocationSection.style.display = 'block';
+            generateTableBtn.style.display = 'none';
+            editConfigBtn.style.display = 'inline-block';
             addTableEventListeners();
         }
     }
@@ -317,12 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let rpThemeMap = {};
     
-    lockConfigBtn.addEventListener('click', () => {
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = true);
-        lockConfigBtn.disabled = true;
-    });
-
-    createTableBtn.addEventListener('click', () => {
+    generateTableBtn.addEventListener('click', () => {
         const studiedThemes = [];
         for (let i = 1; i <= 6; i++) {
             if (document.getElementById(`studied-theme-${i}`).checked) {
@@ -365,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (studentData.length === 0) return;
 
-        if (!lockConfigBtn.disabled) lockConfigBtn.click();
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = true);
 
         const themePairs = [];
         for (let i = 0; i < studiedThemes.length; i++) {
@@ -425,17 +418,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         initialSetupWrapper.style.display = 'none';
         allocationSection.style.display = 'block';
+        generateTableBtn.style.display = 'none';
+        editConfigBtn.style.display = 'inline-block';
         addTableEventListeners();
     });
 
     editConfigBtn.addEventListener('click', () => {
         document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = false);
-        lockConfigBtn.disabled = false;
-        allocationSection.style.display = 'none';
-        initialSetupWrapper.style.display = 'grid';
-    });
-    
-    editStudentListBtn.addEventListener('click', () => {
+        
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
             const tier = row.cells[1].textContent.trim();
@@ -443,11 +433,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${examNumber}\t${tier}\t${name}`;
         }).join('\n');
         studentNamesInput.value = currentData;
-        createTableBtn.textContent = 'Update Allocation Table';
+        
         allocationSection.style.display = 'none';
         initialSetupWrapper.style.display = 'grid';
+        generateTableBtn.style.display = 'inline-block';
+        editConfigBtn.style.display = 'none';
     });
-
+    
     function colorCodeSelectedTheme(selectElement) {
         const cell = selectElement.parentElement;
         for (let i = 1; i <= 6; i++) {
@@ -459,7 +451,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // MODIFIED: Uses the full theme name from the constant
     function updateSelectedThemeForRow(row) {
         const val1 = row.cells[3].dataset.themeId;
         const val2 = row.cells[4].dataset.themeId;
