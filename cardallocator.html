@@ -22,10 +22,12 @@
         .edit-btn:hover { background-color: #e0a800; }
         .allocate-btn { background-color: #ff8c00; }
         .export-btn { background-color: #17a2b8; margin-left: 10px; }
-        .save-btn { background-color: #6c757d; }
         .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; margin-top: 10px; }
         .alert { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
         .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
+        /* ADDED: New style for setup/control buttons */
+        .setup-action-btn { background-color: #e9ecef; color: #212529; font-weight: bold; }
+        .setup-action-btn:hover { background-color: #ced4da; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
         th { background-color: #005a9c; color: white; }
@@ -47,8 +49,8 @@
         <h1>GCSE Speaking Exam Allocator 📋</h1>
         
         <div class="controls section">
-            <button id="save-to-file-btn" class="save-btn">💾 Save Allocation to File</button>
-            <label for="load-from-file-input" class="action-btn" style="margin-left: 10px; display: inline-block; padding: 12px 20px;">📂 Load Allocation from File</label>
+            <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
+            <label for="load-from-file-input" class="action-btn-label setup-action-btn" style="margin-left: 10px;">📂 Load Allocation from File</label>
             <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
             <span id="save-confirm-msg" class="save-confirm">Progress Saved to File!</span>
             <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset Page</button>
@@ -59,7 +61,7 @@
                 <h2>Step 1: Configure RP Themes</h2>
                 <div class="rp-grid-3x2" id="rp-config-grid"></div>
                 <div class="controls" style="margin-top: 20px;">
-                    <button id="lock-config-btn" class="action-btn">Lock RP Themes</button>
+                    <button id="lock-config-btn" class="setup-action-btn">Lock RP Themes</button>
                 </div>
             </div>
 
@@ -68,7 +70,7 @@
                 <div id="student-entry-wrapper">
                     <p>Paste student names (one per line) into the box below.</p>
                     <textarea id="student-names-input" placeholder="Paste names here..."></textarea>
-                    <button id="create-table-btn" class="action-btn" style="margin-top: 10px;">Create Allocation Table</button>
+                    <button id="create-table-btn" class="setup-action-btn" style="margin-top: 10px;">Create Allocation Table</button>
                 </div>
             </div>
         </div>
@@ -78,11 +80,9 @@
             <div class="controls" style="margin-bottom: 20px;">
                 <button id="edit-config-btn" class="edit-btn">✏️ Edit RP Themes</button>
                 <button id="edit-student-list-btn" class="edit-btn" style="margin-left: 10px;">✏️ Edit Student List</button>
-            </div>
-             <div class="controls">
-                <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE ALL CARDS</button>
+                <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE ALL CARDS</button>
                 <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
-             </div>
+            </div>
             <div class="alert" id="allocation-error"></div>
             <div style="overflow-x:auto;">
                 <table id="allocation-table">
@@ -128,8 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- STATE MANAGEMENT AND EXPORT ---
-
-    // Builds a state object from the current page content
     function buildStateObject() {
         const state = { rpConfig: {}, students: [], rpLocked: lockConfigBtn.disabled, studentsImported: !!allocationTableBody.innerHTML };
         for (let i = 1; i <= 6; i++) state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
@@ -146,11 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return state;
     }
 
-    // Populates the page from a given state object
     function populatePageFromState(state) {
         if (!state) return;
-
-        // Reset UI to default
         allocationTableBody.innerHTML = '';
         document.getElementById('student-names-input').value = '';
         allocationSection.style.display = 'none';
@@ -158,13 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
             for (let i = 1; i <= 6; i++) document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
-            if(state.rpLocked) lockConfigBtn.click();
+            document.querySelectorAll('#rp-config-grid select').forEach(s => s.disabled = state.rpLocked);
+            lockConfigBtn.disabled = state.rpLocked;
         }
 
         if (state.students && state.students.length > 0) {
             document.getElementById('student-names-input').value = state.students.map(s => s.name).join('\n');
-            createTableBtn.click(); // This will create the table structure
-            // Now populate the created table with the detailed state
+            createTableBtn.click();
             allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
                 const s = state.students[index];
                 if (s) {
@@ -223,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveAllocationToFile() {
         const state = buildStateObject();
-        const stateString = JSON.stringify(state, null, 2); // Pretty print JSON
+        const stateString = JSON.stringify(state, null, 2);
         const blob = new Blob([stateString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -254,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 alert("Error: Could not load the file. It might be corrupted or not a valid allocation file.");
             }
-            event.target.value = ''; // Clear input to allow loading same file again
+            event.target.value = '';
         };
         reader.readAsText(file);
     }
@@ -389,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial page load
     initializeRpConfig();
-    // REMOVED: The loadState() function is no longer called automatically on page load.
 });
 </script>
 
