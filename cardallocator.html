@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCSE Speaking Exam Allocator (Final Corrected)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+        .section { background-color: #fdfdfd; border: 1px solid #dee2e6; border-radius: 5px; padding: 20px; margin-bottom: 25px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        label { font-weight: 600; margin-bottom: 5px; }
+        select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
+        textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
+        button { padding: 12px 20px; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        .action-btn { background-color: #28a745; }
+        .action-btn:hover { background-color: #218838; }
+        .edit-btn { background-color: #ffc107; color: #212529; }
+        .edit-btn:hover { background-color: #e0a800; }
+        .allocate-btn { background-color: #ff8c00; }
+        .export-btn { background-color: #17a2b8; margin-left: 10px; }
+        .save-btn { background-color: #6c757d; }
+        .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; margin-top: 10px; }
+        .alert { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
+        .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
+        th { background-color: #005a9c; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .controls { display: flex; align-items: center; flex-wrap: wrap; }
+        .student-name[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
+        .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
+        .theme-color-1 { background-color: #cfe2f3; } .theme-color-2 { background-color: #d9ead3; } .theme-color-3 { background-color: #fce5cd; }
+        .theme-color-4 { background-color: #d9d2e9; } .theme-color-5 { background-color: #fff2cc; } .theme-color-6 { background-color: #d0e0e3; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>GCSE Speaking Exam Allocator 📋 (Final Corrected)</h1>
+        
+        <div class="controls section">
+            <button id="save-progress-btn" class="save-btn">💾 Save Progress</button>
+            <span id="save-confirm-msg" class="save-confirm">Progress Saved!</span>
+            <button id="clear-storage-btn" class="clear-btn" style="margin-left: auto;">Clear Saved Data & Reset</button>
+        </div>
+
+        <div class="section" id="setup-section">
+            <h2>Step 1: Configure Role Play Themes</h2>
+            <p>Assign a theme to each Role Play (RP) card using the dropdowns below.</p>
+            <div class="form-grid" id="rp-config-grid"></div>
+            <div class="controls" style="margin-top: 20px;">
+                <button id="lock-config-btn" class="action-btn">Lock RP Themes & Continue</button>
+                <button id="edit-config-btn" class="edit-btn" style="display: none;">✏️ Edit RP Themes</button>
+            </div>
+        </div>
+
+        <div class="section" id="student-import-section" style="display: none;">
+            <h2>Step 2: Import Students</h2>
+            <div id="student-entry-wrapper">
+                <p>Copy student names from a spreadsheet (one name per line) and paste into the box below.</p>
+                <textarea id="student-names-input" placeholder="Paste names here..."></textarea>
+                <button id="create-table-btn" class="action-btn" style="margin-top: 10px;">Create Allocation Table</button>
+            </div>
+            <button id="edit-student-list-btn" class="edit-btn" style="display: none;">✏️ Edit Student List</button>
+        </div>
+
+        <div class="section" id="allocation-section" style="display: none;">
+            <h2>Step 3: Set Themes & Allocate Cards</h2>
+             <div class="controls">
+                <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE ALL CARDS</button>
+                <button id="export-csv-btn" class="export-btn">📄 Export Table to CSV</button>
+             </div>
+            <div class="alert" id="allocation-error"></div>
+            <div style="overflow-x:auto;">
+                <table id="allocation-table">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Theme Choice 1</th>
+                            <th>Theme Choice 2</th>
+                            <th>Selected Theme</th>
+                            <th>Read Aloud (RA)</th>
+                            <th>Role Play (RP)</th>
+                            <th>Photo Card (PT)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const THEMES = { 1: "Personal world", 2: "Lifestyle", 3: "Neighbourhood", 4: "Media & Tech", 5: "Study & future", 6: "Travel and Tourism" };
+    const STORAGE_KEY = 'gcseAllocatorState';
+
+    // DOM Elements
+    const lockConfigBtn = document.getElementById('lock-config-btn');
+    const editConfigBtn = document.getElementById('edit-config-btn');
+    const createTableBtn = document.getElementById('create-table-btn');
+    const editStudentListBtn = document.getElementById('edit-student-list-btn');
+    const autoAllocateBtn = document.getElementById('auto-allocate-btn');
+    const saveProgressBtn = document.getElementById('save-progress-btn');
+    const clearStorageBtn = document.getElementById('clear-storage-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    
+    const studentImportSection = document.getElementById('student-import-section');
+    const allocationSection = document.getElementById('allocation-section');
+    const allocationTableBody = document.querySelector('#allocation-table tbody');
+    const allocationError = document.getElementById('allocation-error');
+
+    // Helper Functions
+    const getThemeFromPhoto = (photoNum) => Math.floor((parseInt(photoNum) - 1) / 3) + 1;
+    const getThemeFromRa = (raNum) => parseInt(raNum);
+
+    function initializeRpConfig() {
+        const rpConfigGrid = document.getElementById('rp-config-grid');
+        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="form-group"><label for="rp-theme-${i+1}">Theme for RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('')}</select></div>`).join('');
+    }
+    
+    // --- SAVE, LOAD, EXPORT LOGIC ---
+    function saveState() {
+        const state = { rpConfig: {}, students: [], rpLocked: !lockConfigBtn.style.display, studentsImported: !document.getElementById('student-entry-wrapper').style.display };
+        for (let i = 1; i <= 6; i++) state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            state.students.push({
+                name: row.cells[0].textContent, choice1: row.querySelector('.theme-choice-1').value, choice2: row.querySelector('.theme-choice-2').value,
+                selected: row.querySelector('.selected-theme').value, 
+                ra: row.querySelector('.ra-result span')?.textContent || '', 
+                rp: row.querySelector('.rp-result span')?.textContent || '',
+                pt: row.querySelector('.photo-result span')?.textContent || ''
+            });
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        const confirmMsg = document.getElementById('save-confirm-msg');
+        confirmMsg.style.display = 'inline';
+        setTimeout(() => { confirmMsg.style.display = 'none'; }, 2000);
+    }
+
+    function applyCardColor(cell, cardText, rpThemeMap) {
+        cell.innerHTML = '';
+        if (!cardText) return;
+        const cardNum = parseInt(cardText.match(/\d+/)[0]);
+        let themeNum = 0;
+        if (cardText.startsWith('PT')) themeNum = getThemeFromPhoto(cardNum);
+        else if (cardText.startsWith('RA')) themeNum = getThemeFromRa(cardNum);
+        else if (cardText.startsWith('RP')) themeNum = rpThemeMap[cardNum];
+        if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText}</span>`;
+    }
+
+    function loadState() {
+        const savedState = localStorage.getItem(STORAGE_KEY);
+        if (!savedState) return;
+        const state = JSON.parse(savedState);
+        let loadedRpThemeMap = {};
+
+        if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
+                loadedRpThemeMap[i] = parseInt(state.rpConfig[i]);
+            }
+            if(state.rpLocked) lockConfigBtn.click();
+        }
+
+        if (state.students && state.students.length > 0) {
+            document.getElementById('student-names-input').value = state.students.map(s => s.name).join('\n');
+            createTableBtn.click();
+            allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
+                const s = state.students[index];
+                row.querySelector('.theme-choice-1').value = s.choice1;
+                row.querySelector('.theme-choice-2').value = s.choice2;
+                row.querySelector('.theme-choice-1').dispatchEvent(new Event('change'));
+                row.querySelector('.selected-theme').value = s.selected;
+                applyCardColor(row.querySelector('.ra-result'), s.ra, loadedRpThemeMap);
+                applyCardColor(row.querySelector('.rp-result'), s.rp, loadedRpThemeMap);
+                applyCardColor(row.querySelector('.photo-result'), s.pt, loadedRpThemeMap);
+            });
+            if(state.studentsImported) {
+                document.getElementById('student-entry-wrapper').style.display = 'none';
+                editStudentListBtn.style.display = 'inline-block';
+            }
+        }
+    }
+
+    function exportToCSV() {
+        const headers = ["Student Name", "Choice 1", "Choice 2", "Selected", "Read Aloud (RA)", "Role Play (RP)", "Photo Card (PT)"];
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const rowData = [
+                `"${row.cells[0].textContent}"`, `"${row.querySelector('.theme-choice-1').value}"`, `"${row.querySelector('.theme-choice-2').value}"`,
+                `"${row.querySelector('.selected-theme').value}"`, `"${row.querySelector('.ra-result span')?.textContent || ''}"`,
+                `"${row.querySelector('.rp-result span')?.textContent || ''}"`, `"${row.querySelector('.photo-result span')?.textContent || ''}"`
+            ];
+            csvContent += rowData.join(",") + "\n";
+        });
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", "speaking_exam_allocations.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    // --- CORE APPLICATION LOGIC ---
+    let rpThemeMap = {};
+    
+    lockConfigBtn.addEventListener('click', () => {
+        document.getElementById('rp-config-grid').style.display = 'none';
+        for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
+        lockConfigBtn.style.display = 'none';
+        editConfigBtn.style.display = 'inline-block';
+        if (!allocationSection.style.display || allocationSection.style.display === 'none') studentImportSection.style.display = 'block';
+    });
+
+    editConfigBtn.addEventListener('click', () => {
+        if (allocationTableBody.querySelector('.ra-result span') && !confirm("Warning: Changing RP themes will clear all existing card allocations. Continue?")) return;
+        if (allocationTableBody.querySelector('.ra-result span')) allocationTableBody.querySelectorAll('.photo-result, .ra-result, .rp-result').forEach(cell => cell.innerHTML = '');
+        document.getElementById('rp-config-grid').style.display = 'grid';
+        lockConfigBtn.textContent = 'Update & Re-Lock RP Themes';
+        editConfigBtn.style.display = 'none';
+        lockConfigBtn.style.display = 'inline-block';
+    });
+    
+    createTableBtn.addEventListener('click', () => {
+        const names = document.getElementById('student-names-input').value.trim().split('\n').filter(name => name.trim() !== '');
+        if (names.length === 0) return;
+        const themeOptions = Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${num}: ${name}</option>`).join('');
+        allocationTableBody.innerHTML = names.map(name => `<tr><td class="student-name" contenteditable="true">${name.trim()}</td><td><select class="theme-choice-1">${themeOptions}</select></td><td><select class="theme-choice-2">${themeOptions}</select></td><td><select class="selected-theme" disabled><option value="">-</option></select></td><td class="result ra-result"></td><td class="result rp-result"></td><td class="result photo-result"></td></tr>`).join('');
+        document.getElementById('student-entry-wrapper').style.display = 'none';
+        editStudentListBtn.style.display = 'inline-block';
+        allocationSection.style.display = 'block';
+        addTableEventListeners();
+    });
+
+    editStudentListBtn.addEventListener('click', () => {
+        const currentNames = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => row.cells[0].textContent.trim()).join('\n');
+        document.getElementById('student-names-input').value = currentNames;
+        document.getElementById('student-entry-wrapper').style.display = 'block';
+        editStudentListBtn.style.display = 'none';
+        createTableBtn.textContent = 'Update Allocation Table';
+    });
+    
+    function addTableEventListeners() {
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const choice1 = row.querySelector('.theme-choice-1'), choice2 = row.querySelector('.theme-choice-2'), selected = row.querySelector('.selected-theme');
+            function updateSelectedTheme() {
+                const val1 = choice1.value, val2 = choice2.value;
+                selected.disabled = true; selected.innerHTML = '<option value="">-</option>';
+                if (val1 && val2 && val1 !== val2) {
+                    selected.innerHTML = `<option value="">Select...</option><option value="${val1}">${val1}: ${THEMES[val1]}</option><option value="${val2}">${val2}: ${THEMES[val2]}</option>`;
+                    selected.disabled = false;
+                }
+            }
+            choice1.addEventListener('change', updateSelectedTheme);
+            choice2.addEventListener('change', updateSelectedTheme);
+        });
+    }
+
+    autoAllocateBtn.addEventListener('click', () => {
+        allocationError.style.display = 'none';
+        let photoCounters = {}, raUsage = {}, rpUsage = {};
+        for(let i=1; i<=6; i++) { photoCounters[i]=0; raUsage[i]=0; rpUsage[i]=0; }
+        const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
+        for (const row of rows) {
+            if (!row.querySelector('.selected-theme').value) {
+                allocationError.textContent = `Error: Please select a final theme for all students. ${row.cells[0].textContent} is missing a selection.`;
+                allocationError.style.display = 'block'; return;
+            }
+        }
+        rows.forEach(row => {
+            const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
+            const photoCard = (selectedTheme - 1) * 3 + 1 + (photoCounters[selectedTheme]++ % 3);
+            let validRa = Object.keys(raUsage).filter(r => getThemeFromRa(r) !== selectedTheme).sort((a,b) => raUsage[a]-raUsage[b]);
+            
+            // ** THE FIX IS HERE **
+            let validRp = Object.keys(rpUsage).filter(r => rpThemeMap[r] !== selectedTheme).sort((a,b) => rpUsage[a]-rpUsage[b]);
+            
+            let assignedRa, assignedRp;
+            for (const ra of validRa) {
+                for (const rp of validRp) { if (getThemeFromRa(ra) !== rpThemeMap[rp]) { assignedRa = ra; assignedRp = rp; break; }}
+                if (assignedRa) break;
+            }
+
+            if (!assignedRa || !assignedRp) {
+                 allocationError.textContent = `CRITICAL ERROR: Could not find a valid non-conflicting RA/RP pair for ${row.cells[0].textContent}.`;
+                 allocationError.style.display = 'block';
+                 return;
+            }
+
+            raUsage[assignedRa]++; rpUsage[assignedRp]++;
+            applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, rpThemeMap);
+            applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, rpThemeMap);
+            applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, rpThemeMap);
+        });
+    });
+
+    saveProgressBtn.addEventListener('click', saveState);
+    exportCsvBtn.addEventListener('click', exportToCSV);
+    clearStorageBtn.addEventListener('click', () => {
+        if (confirm("Are you sure? This will clear all saved data and reset the page.")) {
+            localStorage.removeItem(STORAGE_KEY);
+            window.location.reload();
+        }
+    });
+
+    initializeRpConfig();
+    loadState();
+});
+</script>
+
+</body>
+</html>
