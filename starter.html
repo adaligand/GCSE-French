@@ -147,16 +147,53 @@
     .answer-cell span.visible { visibility: visible; }
 
     /* --- PRINT --- */
+ /* --- PRINT --- */
     @media print {
-      body { padding: 0; margin: 0; background: white !important; }
-      @page { size: A4; margin: 1cm; }
-      .container, #main-menu, #practice-section, #vocab-controls-panel { display: none !important; }
-      #vocab-section { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 0.5cm; }
-      #vocab-print-area { display: flex !important; justify-content: space-between; gap: 20px; width: 100%; }
-      .print-table-wrapper { width: 48%; page-break-inside: avoid; box-sizing: border-box; }
-      #vocab-print-area table { font-size: 14pt; border-collapse: collapse; width: 100%; margin: 0; table-layout: fixed; }
-      #vocab-print-area th, #vocab-print-area td { border: 1px solid #000; padding: 8px; line-height: 1.2; }
-      #vocab-print-area .answer-cell span { visibility: hidden !important; }
+        /* Set page to landscape and adjust margins */
+        @page { size: A4 landscape; margin: 1cm; }
+        
+        /* Hide all user interface elements */
+        .container, #main-menu, #practice-section, #vocab-controls-panel { display: none !important; }
+        
+        /* Show only the vocab section for printing */
+        #vocab-section { 
+            display: block !important; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            padding: 0; 
+            margin: 0;
+        }
+
+        /* --- Quiz Grid Styling --- */
+        #vocab-test-container {
+            display: block !important;
+            width: 100%;
+            /* Use a CSS grid or flex to attempt 2-column layout (Browser dependent) */
+            column-count: 2;
+            column-gap: 20px;
+        }
+
+        /* Apply table styling for print */
+        #vocab-test-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11pt; /* Smaller font for better fit */
+            page-break-inside: avoid; /* Keep tables from breaking across columns/pages */
+            margin-bottom: 20px;
+        }
+        
+        #vocab-test-container th, #vocab-test-container td { 
+            border: 1px solid #000; 
+            padding: 5px 8px; 
+            line-height: 1.2; 
+        }
+        
+        /* Ensure answers are hidden for the blank quiz printout */
+        .answer-cell span { 
+            visibility: hidden !important; 
+        }
     }
   </style>
 </head>
@@ -518,24 +555,22 @@ function vocab_revealAnswers() {
 }
 
 function vocab_generatePrintVersion() {
-    const set1 = vocab_setSelect.value;
-    if (!set1) return;
+    // 1. Ensure the print area with the full list is hidden
+    vocab_printArea.classList.add('hide'); 
     
-    let combined = [...vocab_vocabSets[set1]];
-    const set2 = vocab_setSelect2.value;
-    if (set2) {
-      combined = combined.concat(vocab_vocabSets[set2]);
-    }
+    // 2. Hide the main container and show ONLY the vocab section for printing
+    // The existing CSS @media print block handles this, but we can ensure
+    // the table we want to print is visible just before printing.
+    vocab_testContainer.classList.remove('hide'); 
 
-    const shuffled = combined.sort(() => 0.5 - Math.random());
-    vocab_printArea.innerHTML = `
-    <div class='print-table-wrapper'>
-        <table><thead><tr><th>No.</th><th>Target</th><th>English</th></tr></thead>
-        <tbody>${shuffled.map((i, n) => `<tr><td>${n+1}</td><td>${i.target}</td><td>${i.english}</td></tr>`).join('')}</tbody></table>
-    </div>
-    `;
-    vocab_printArea.classList.remove('hide');
+    // 3. Set the print title (Optional but good for printouts)
+    document.title = "Vocabulary Test - Print Version";
+
+    // 4. Open the print dialog
     window.print();
+    
+    // 5. Restore the document title and any temporary display changes
+    document.title = "Language Practice Hub";
 }
 
 // --- Start the App ---
