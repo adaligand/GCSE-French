@@ -14,7 +14,7 @@
         .theme-grid input { width: 1.3em; height: 1.3em; }
         .initial-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 25px; }
         label { font-weight: 600; margin-bottom: 5px; display: block; }
-        select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
+        input[type="text"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
         button, .action-btn-label {
             display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; line-height: 1.5; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; text-align: center; vertical-align: middle; transition: background-color 0.2s; box-sizing: border-box;
@@ -27,12 +27,12 @@
         .allocate-btn { background-color: #ff8c00; }
         .export-btn { background-color: #17a2b8; margin-left: 10px; }
         .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; margin-top: 10px; }
+        .shuffle-btn { background-color: #5856d6; margin-left: 10px; }
+        .shuffle-btn:hover { background-color: #4c4aa8; }
         .alert { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
         .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
         .setup-action-btn { background-color: #e9ecef; color: #212529; font-weight: bold; }
         .setup-action-btn:hover { background-color: #ced4da; }
-        .shuffle-btn { background-color: #5856d6; margin-left: 10px; } /* ADDED */
-        .shuffle-btn:hover { background-color: #4c4aa8; } /* ADDED */
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
         th { background-color: #005a9c; color: white; }
@@ -45,6 +45,7 @@
         .rp-config-item { display: flex; align-items: center; gap: 10px; }
         .rp-config-item label { display: inline-block; margin-bottom: 0; flex-shrink: 0; }
         .rp-config-item select { width: auto; flex-grow: 1; }
+        .exclude-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
     </style>
 </head>
 <body>
@@ -72,9 +73,22 @@
                 <h2>Step 2: Configure RP Themes</h2>
                 <div class="rp-grid-3x2" id="rp-config-grid"></div>
             </div>
+            
+            <div class="section" id="exclude-cards-section">
+                <h2>Step 3: Exclude Cards (Optional)</h2>
+                <p>Enter card numbers to exclude, separated by commas (e.g., 1, 5, 9).</p>
+                <div class="exclude-grid">
+                    <div><label for="exclude-ra-f-input">Exclude RA (Foundation)</label><input type="text" id="exclude-ra-f-input" placeholder="e.g., 2, 6"></div>
+                    <div><label for="exclude-ra-h-input">Exclude RA (Higher)</label><input type="text" id="exclude-ra-h-input" placeholder="e.g., 2, 6"></div>
+                    <div><label for="exclude-rp-f-input">Exclude RP (Foundation)</label><input type="text" id="exclude-rp-f-input" placeholder="e.g., 1, 4"></div>
+                    <div><label for="exclude-rp-h-input">Exclude RP (Higher)</label><input type="text" id="exclude-rp-h-input" placeholder="e.g., 1, 4"></div>
+                    <div><label for="exclude-pt-f-input">Exclude PT (Foundation)</label><input type="text" id="exclude-pt-f-input" placeholder="e.g., 3, 8"></div>
+                    <div><label for="exclude-pt-h-input">Exclude PT (Higher)</label><input type="text" id="exclude-pt-h-input" placeholder="e.g., 3, 8"></div>
+                </div>
+            </div>
 
             <div class="section" id="student-import-section">
-                <h2>Step 3: Import Students</h2>
+                <h2>Step 4: Import Students</h2>
                 <div id="student-entry-wrapper">
                     <p>Paste from a spreadsheet or type, using Tab to separate columns (Exam Number, Tier, First Name, Last Name).</p>
                     <textarea id="student-names-input" placeholder="Paste or type data here..."></textarea>
@@ -84,10 +98,10 @@
 
         <div class="section" id="allocation-section" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
-                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">Step 4: Set Themes & Allocate Cards</h2>
+                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">Step 5: Set Themes & Allocate Cards</h2>
                 <div>
                     <button id="shuffle-choices-btn" class="shuffle-btn">🎲 Shuffle Choices</button>
-                    <button id="auto-allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE CARDS</button>
+                    <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE CARDS</button>
                     <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
                 </div>
             </div>
@@ -125,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveToFileBtn = document.getElementById('save-to-file-btn'); 
     const loadFromFileInput = document.getElementById('load-from-file-input'); 
     const studentNamesInput = document.getElementById('student-names-input');
-    const shuffleChoicesBtn = document.getElementById('shuffle-choices-btn'); // RESTORED
+    const shuffleChoicesBtn = document.getElementById('shuffle-choices-btn');
     const saveToFileBtnBottom = document.getElementById('save-to-file-btn-bottom');
     const exportExcelBtnBottom = document.getElementById('export-excel-btn-bottom');
     
@@ -150,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function buildStateObject() {
-        const state = { rpConfig: {}, students: [], rpLocked: allocationSection.style.display === 'block', studiedThemes: [] };
+        const state = { rpConfig: {}, students: [], rpLocked: allocationSection.style.display === 'block', studiedThemes: [], excludedCards: {} };
         for (let i = 1; i <= 6; i++) {
             state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
             if (document.getElementById(`studied-theme-${i}`).checked) {
@@ -158,6 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        state.excludedCards.ra = { f: document.getElementById('exclude-ra-f-input').value, h: document.getElementById('exclude-ra-h-input').value };
+        state.excludedCards.rp = { f: document.getElementById('exclude-rp-f-input').value, h: document.getElementById('exclude-rp-h-input').value };
+        state.excludedCards.pt = { f: document.getElementById('exclude-pt-f-input').value, h: document.getElementById('exclude-pt-h-input').value };
+
         if (allocationTableBody.innerHTML) {
             allocationTableBody.querySelectorAll('tr').forEach(row => {
                 state.students.push({
@@ -197,7 +215,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = state.rpLocked);
+        if(state.excludedCards) {
+            document.getElementById('exclude-ra-f-input').value = state.excludedCards.ra?.f || '';
+            document.getElementById('exclude-ra-h-input').value = state.excludedCards.ra?.h || '';
+            document.getElementById('exclude-rp-f-input').value = state.excludedCards.rp?.f || '';
+            document.getElementById('exclude-rp-h-input').value = state.excludedCards.rp?.h || '';
+            document.getElementById('exclude-pt-f-input').value = state.excludedCards.pt?.f || '';
+            document.getElementById('exclude-pt-h-input').value = state.excludedCards.pt?.h || '';
+        }
+
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = state.rpLocked);
 
         if (state.students && state.students.length > 0) {
             allocationTableBody.innerHTML = state.students.map(s => {
@@ -368,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (studentData.length === 0) return;
 
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = true);
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = true);
 
         const themePairs = [];
         for (let i = 0; i < studiedThemes.length; i++) {
@@ -443,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     editConfigBtn.addEventListener('click', () => {
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input').forEach(el => el.disabled = false);
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = false);
         
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
@@ -522,8 +549,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     autoAllocateBtn.addEventListener('click', () => {
+        // MODIFIED/FIXED: Removed confirmation pop-up
+        allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
+
         for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
         allocationError.style.display = 'none';
+
+        const excludedRa = {
+            f: document.getElementById('exclude-ra-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+            h: document.getElementById('exclude-ra-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+        };
+        const excludedRp = {
+            f: document.getElementById('exclude-rp-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+            h: document.getElementById('exclude-rp-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+        };
+        const excludedPt = {
+            f: document.getElementById('exclude-pt-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+            h: document.getElementById('exclude-pt-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+        };
 
         const counters = { H: { photo: {}, ra: {}, rp: {} }, F: { photo: {}, ra: {}, rp: {} } };
         ['H', 'F'].forEach(tier => {
@@ -533,36 +576,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
+        let allocationsMade = 0;
         
         rows.forEach(row => {
-            const tier = row.cells[1].textContent.trim().toUpperCase();
-            if (tier !== 'H' && tier !== 'F') return;
-            const raSpan = row.querySelector('.ra-result span');
-            if (raSpan) {
-                const raNum = raSpan.textContent.match(/\d+/)[0];
-                if(raNum) counters[tier].ra[raNum]++;
-            }
-            const rpSpan = row.querySelector('.rp-result span');
-            if (rpSpan) {
-                const rpNum = rpSpan.textContent.match(/\d+/)[0];
-                if(rpNum) counters[tier].rp[rpNum]++;
-            }
-            const ptSpan = row.querySelector('.photo-result span');
-            if (ptSpan) {
-                const ptNum = ptSpan.textContent.match(/\d+/)[0];
-                if(ptNum) {
-                    const themeForPt = getThemeFromPhoto(ptNum);
-                    counters[tier].photo[themeForPt]++;
-                }
-            }
-        });
-
-        let allocationsMade = 0;
-        rows.forEach(row => {
             const hasSelectedTheme = !!row.querySelector('.selected-theme').value;
-            const hasCards = !!row.querySelector('.ra-result span');
 
-            if (!hasSelectedTheme || hasCards) {
+            if (!hasSelectedTheme) {
                 return;
             }
 
@@ -576,9 +595,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
             const tierCounters = counters[tier];
 
-            const photoCard = (selectedTheme - 1) * 3 + 1 + (tierCounters.photo[selectedTheme]++ % 3);
-            let validRa = Object.keys(tierCounters.ra).filter(r => getThemeFromRa(r) !== selectedTheme).sort((a,b) => tierCounters.ra[a] - tierCounters.ra[b]);
-            let validRp = Object.keys(tierCounters.rp).filter(r => rpThemeMap[r] !== selectedTheme).sort((a,b) => tierCounters.rp[a] - tierCounters.rp[b]);
+            const allPhotoCardsForTheme = [(selectedTheme - 1) * 3 + 1, (selectedTheme - 1) * 3 + 2, (selectedTheme - 1) * 3 + 3];
+            const validPhotoCards = allPhotoCardsForTheme.filter(c => !excludedPt[tier.toLowerCase()].includes(c.toString()));
+            if (validPhotoCards.length === 0) {
+                allocationError.textContent = `CRITICAL ERROR: All Photo Cards for Theme ${selectedTheme} are excluded for Tier ${tier}. Cannot allocate for ${row.cells[2].textContent}.`;
+                allocationError.style.display = 'block'; return;
+            }
+            const photoCard = validPhotoCards[tierCounters.photo[selectedTheme]++ % validPhotoCards.length];
+
+            let validRa = Object.keys(tierCounters.ra).filter(r => getThemeFromRa(r) !== selectedTheme && !excludedRa[tier.toLowerCase()].includes(r)).sort((a,b) => tierCounters.ra[a] - tierCounters.ra[b]);
+            let validRp = Object.keys(tierCounters.rp).filter(r => rpThemeMap[r] !== selectedTheme && !excludedRp[tier.toLowerCase()].includes(r)).sort((a,b) => tierCounters.rp[a] - tierCounters.rp[b]);
             
             let assignedRa, assignedRp;
             for (const ra of validRa) {
@@ -605,12 +631,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (allocationsMade === 0) {
-            allocationError.textContent = 'No new students to allocate. Ensure students have a selected theme and do not already have cards.';
+            allocationError.textContent = 'No students had a selected theme. Please make selections before allocating cards.';
             allocationError.style.display = 'block';
         }
     });
-
-    // RESTORED: Shuffle logic
+    
     shuffleChoicesBtn.addEventListener('click', () => {
         allocationTableBody.querySelectorAll('tr').forEach(row => {
             const choice1Cell = row.cells[3];
@@ -657,7 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // RESTORED: Add event listeners to bottom buttons
     saveToFileBtnBottom.addEventListener('click', saveAllocationToFile);
     exportExcelBtnBottom.addEventListener('click', exportToExcel);
 
