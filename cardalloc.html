@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCSE Speaking Card Allocator</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
+        .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+        .section { background-color: #fdfdfd; border: 1px solid #dee2e6; border-radius: 5px; padding: 20px; }
+        .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .theme-grid label { display: flex; align-items: center; gap: 8px; font-weight: normal; }
+        .initial-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 25px; }
+        label { font-weight: 600; margin-bottom: 5px; display: block; }
+        input[type="text"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
+        textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
+        button, .action-btn-label { display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; line-height: 1.5; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; text-align: center; transition: background-color 0.2s; box-sizing: border-box; }
+        button:hover, .action-btn-label:hover { background-color: #0056b3; }
+        .allocate-btn { background-color: #ff8c00; }
+        .export-btn { background-color: #17a2b8; margin-left: 10px; }
+        .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; margin-top: 10px; }
+        .shuffle-btn { background-color: #5856d6; margin-left: 10px; }
+        .alert { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
+        .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
+        .setup-action-btn { background-color: #e9ecef; color: #212529; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #005a9c; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .controls { display: flex; align-items: center; flex-wrap: wrap; }
+        .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; border: 1px solid rgba(0,0,0,0.1); }
+        .theme-color-1 { background-color: #aed6f1; } .theme-color-2 { background-color: #a2d9ab; } .theme-color-3 { background-color: #f7dc6f; } .theme-color-4 { background-color: #d2b4de; } .theme-color-5 { background-color: #f1948a; } .theme-color-6 { background-color: #dfdfdf; }
+        .exclude-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
+        .exclude-item { display: flex; align-items: center; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1> 📋 GCSE Speaking Card Allocator</h1>
+        
+        <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
+            <button id="save-to-file-btn" class="setup-action-btn">💾 Save</button>
+            <label for="load-from-file-input" class="action-btn-label setup-action-btn" style="margin-left: 10px;">📂 Load</label>
+            <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
+            <button id="generate-table-btn" class="setup-action-btn" style="margin-left: 10px;">🧩 Generate Table</button>
+            <button id="edit-config-btn" class="setup-action-btn" style="margin-left: 10px; display: none;">✏️ Edit Config</button>
+            <span id="save-confirm-msg" class="save-confirm">Saved!</span>
+            <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset</button>
+        </div>
+
+        <div class="initial-setup-grid" id="initial-setup-wrapper">
+            <div class="section">
+                <h2>1: Studied Themes</h2>
+                <div id="studied-themes-grid" class="theme-grid"></div>
+            </div>
+
+            <div class="section">
+                <h2>2: Exclude Cards</h2>
+                <div class="exclude-grid">
+                    <div class="exclude-item"><label>FRA</label><input type="text" id="exclude-ra-f-input"></div>
+                    <div class="exclude-item"><label>FRP</label><input type="text" id="exclude-rp-f-input"></div>
+                    <div class="exclude-item"><label>FPT</label><input type="text" id="exclude-pt-f-input"></div>
+                    <div class="exclude-item"><label>HRA</label><input type="text" id="exclude-ra-h-input"></div>
+                    <div class="exclude-item"><label>HRP</label><input type="text" id="exclude-rp-h-input"></div>
+                    <div class="exclude-item"><label>HPT</label><input type="text" id="exclude-pt-h-input"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>3: Import Students</h2>
+                <textarea id="student-names-input" placeholder="Exam Number	Tier	First Name	Last Name"></textarea>
+            </div>
+        </div>
+
+        <div class="section" id="allocation-section" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>4: Set Themes & Allocate</h2>
+                <div>
+                    <button id="shuffle-choices-btn" class="shuffle-btn">🎲 Shuffle</button>
+                    <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE</button>
+                    <button id="export-excel-btn" class="export-btn">📄 Export</button>
+                </div>
+            </div>
+            <div class="alert" id="allocation-error"></div>
+            <table id="allocation-table">
+                <thead>
+                    <tr><th>Exam Nbr</th><th>Tier</th><th>Student Name</th><th>Choice 1</th><th>Choice 2</th><th>Selected Theme</th><th>RA</th><th>RP</th><th>PT</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const THEMES = { 1: "1 - Personal world", 2: "2 - Lifestyle", 3: "3 - Neighbourhood", 4: "4 - Media & Tech", 5: "5 - Study & future", 6: "6 - Travel and Tourism" };
+    
+    // UI Elements
+    const elements = ['generate-table-btn', 'edit-config-btn', 'auto-allocate-btn', 'clear-data-btn', 'export-excel-btn', 'save-to-file-btn', 'load-from-file-input', 'student-names-input', 'shuffle-choices-btn', 'initial-setup-wrapper', 'allocation-section', 'allocation-table', 'allocation-error'];
+    const ui = {}; elements.forEach(id => ui[id] = document.getElementById(id));
+    const tbody = ui['allocation-table'].querySelector('tbody');
+
+    const getThemeFromCard = (num) => parseInt(num); // Simple mapping: Card 1 = Theme 1
+
+    function init() {
+        document.getElementById('studied-themes-grid').innerHTML = Object.entries(THEMES).map(([n, name]) => 
+            `<label><input type="checkbox" class="studied-theme-checkbox" value="${n}">${name}</label>`).join('');
+    }
+
+    function buildState() {
+        const students = [];
+        tbody.querySelectorAll('tr').forEach(row => {
+            students.push({
+                examNumber: row.cells[0].textContent, tier: row.cells[1].textContent, name: row.cells[2].textContent,
+                choice1: row.cells[3].dataset.themeId, choice2: row.cells[4].dataset.themeId,
+                selected: row.querySelector('.selected-theme').value,
+                ra: row.querySelector('.ra-result').innerHTML, rp: row.querySelector('.rp-result').innerHTML, pt: row.querySelector('.photo-result').innerHTML
+            });
+        });
+        return {
+            students,
+            studiedThemes: Array.from(document.querySelectorAll('.studied-theme-checkbox:checked')).map(cb => cb.value),
+            excluded: {
+                ra: { f: ui['exclude-ra-f-input'].value, h: ui['exclude-ra-h-input'].value },
+                rp: { f: ui['exclude-rp-f-input'].value, h: ui['exclude-rp-h-input'].value },
+                pt: { f: ui['exclude-pt-f-input'].value, h: ui['exclude-pt-h-input'].value }
+            }
+        };
+    }
+
+    ui['generate-table-btn'].addEventListener('click', () => {
+        const studied = Array.from(document.querySelectorAll('.studied-theme-checkbox:checked')).map(cb => cb.value);
+        if (studied.length < 2) return alert("Select at least 2 themes.");
+
+        const lines = ui['student-names-input'].value.trim().split('\n');
+        const students = lines.map(line => {
+            const p = line.split('\t');
+            return { examNumber: (p[0]||'').trim(), tier: (p[1]||'').trim().toUpperCase(), name: `${p[2]||''} ${p[3]||''}`.trim() };
+        }).filter(s => s.name && s.examNumber);
+
+        const pairs = [];
+        for(let i=0; i<studied.length; i++) for(let j=i+1; j<studied.length; j++) pairs.push([studied[i], studied[j]]);
+        
+        tbody.innerHTML = students.map((s, i) => {
+            const p = pairs[i % pairs.length];
+            const [c1, c2] = Math.random() > 0.5 ? [p[0], p[1]] : [p[1], p[0]];
+            return `<tr>
+                <td contenteditable="true">${s.examNumber}</td><td contenteditable="true">${s.tier}</td><td contenteditable="true">${s.name}</td>
+                <td class="theme-choice-1" data-theme-id="${c1}">${THEMES[c1]}</td>
+                <td class="theme-choice-2" data-theme-id="${c2}">${THEMES[c2]}</td>
+                <td><select class="selected-theme"><option value="">Select...</option><option value="${c1}">${THEMES[c1]}</option><option value="${c2}">${THEMES[c2]}</option></select></td>
+                <td class="result ra-result"></td><td class="result rp-result"></td><td class="result photo-result"></td>
+            </tr>`;
+        }).join('');
+
+        ui['initial-setup-wrapper'].style.display = 'none';
+        ui['allocation-section'].style.display = 'block';
+        ui['generate-table-btn'].style.display = 'none';
+        ui['edit-config-btn'].style.display = 'inline-block';
+        
+        tbody.querySelectorAll('.selected-theme').forEach(sel => {
+            sel.addEventListener('change', (e) => {
+                const cell = e.target.parentElement;
+                cell.className = e.target.value ? `theme-color-${e.target.value}` : '';
+                const row = cell.parentElement;
+                row.querySelectorAll('.result').forEach(r => r.innerHTML = '');
+            });
+        });
+    });
+
+    ui['auto-allocate-btn'].addEventListener('click', () => {
+        ui['allocation-error'].style.display = 'none';
+        const state = buildState();
+        const counters = { H: { ra: {}, rp: {}, pt: {} }, F: { ra: {}, rp: {}, pt: {} } };
+        [1,2,3,4,5,6].forEach(n => { ['H','F'].forEach(t => { counters[t].ra[n]=0; counters[t].rp[n]=0; counters[t].pt[n]=0; })});
+
+        const parseExcl = (val) => val.split(',').map(s => s.trim()).filter(Boolean);
+        const excluded = {
+            H: { ra: parseExcl(state.excluded.ra.h), rp: parseExcl(state.excluded.rp.h), pt: parseExcl(state.excluded.pt.h) },
+            F: { ra: parseExcl(state.excluded.ra.f), rp: parseExcl(state.excluded.rp.f), pt: parseExcl(state.excluded.pt.f) }
+        };
+
+        tbody.querySelectorAll('tr').forEach(row => {
+            const tier = row.cells[1].textContent.trim().toUpperCase();
+            const selected = row.querySelector('.selected-theme').value;
+            if (!selected || (tier !== 'H' && tier !== 'F')) return;
+
+            const sNum = parseInt(selected);
+            const c = counters[tier];
+            const ex = excluded[tier];
+
+            // 1. Photo Card (Must be Theme of choice)
+            const ptOptions = [(sNum-1)*3+1, (sNum-1)*3+2, (sNum-1)*3+3].filter(n => !ex.pt.includes(n.toString()));
+            const ptCard = ptOptions[c.pt[sNum]++ % ptOptions.length];
+
+            // 2. RA & RP (Must not be Selected Theme, and must be different from each other)
+            let assignedRa, assignedRp;
+            const validRa = [1,2,3,4,5,6].filter(n => n !== sNum && !ex.ra.includes(n.toString())).sort((a,b) => c.ra[a] - c.ra[b]);
+            const validRp = [1,2,3,4,5,6].filter(n => n !== sNum && !ex.rp.includes(n.toString())).sort((a,b) => c.rp[a] - c.rp[b]);
+
+            for (let ra of validRa) {
+                for (let rp of validRp) {
+                    if (ra !== rp) { assignedRa = ra; assignedRp = rp; break; }
+                }
+                if (assignedRa) break;
+            }
+
+            if (assignedRa && assignedRp) {
+                c.ra[assignedRa]++; c.rp[assignedRp]++;
+                row.querySelector('.ra-result').innerHTML = `<span class="theme-color-${assignedRa}">RA${assignedRa}</span>`;
+                row.querySelector('.rp-result').innerHTML = `<span class="theme-color-${assignedRp}">RP${assignedRp}</span>`;
+                row.querySelector('.photo-result').innerHTML = `<span class="theme-color-${sNum}">PT${ptCard}</span>`;
+            } else {
+                ui['allocation-error'].textContent = "Could not find a valid combination for some students.";
+                ui['allocation-error'].style.display = 'block';
+            }
+        });
+    });
+
+    ui['edit-config-btn'].addEventListener('click', () => {
+        ui['initial-setup-wrapper'].style.display = 'grid';
+        ui['allocation-section'].style.display = 'none';
+        ui['generate-table-btn'].style.display = 'inline-block';
+        ui['edit-config-btn'].style.display = 'none';
+    });
+
+    ui['clear-data-btn'].addEventListener('click', () => { if(confirm("Reset everything?")) window.location.reload(); });
+    init();
+});
+</script>
+</body>
+</html>
