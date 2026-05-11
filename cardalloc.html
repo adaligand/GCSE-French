@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Card Allocator</title>
+    <title>GCSE cCard Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -160,18 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
    function initializeStudiedThemes() {
         const grid = document.getElementById('studied-themes-grid');
+        if (!grid) return; // Sécurité
         grid.innerHTML = '';
         for (let i = 1; i <= 6; i++) {
             const label = document.createElement('label');
             label.innerHTML = `<input type="checkbox" id="studied-theme-${i}" value="${i}" checked> Theme ${i}: ${THEMES[i]}`;
             grid.appendChild(label);
         }
-        // La ligne qui causait l'erreur (rp-theme-selector) a été supprimée ici
-    }
-
-    function initializeRpConfig() {
-        const rpConfigGrid = document.getElementById('rp-config-grid');
-        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
     }
     
 function buildStateObject() {
