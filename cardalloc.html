@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE cCard Allocator</title>
+    <title>GCSE Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -158,17 +158,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const getThemeFromPhoto = (photoNum) => Math.floor((parseInt(photoNum) - 1) / 3) + 1;
     const getThemeFromRa = (raNum) => parseInt(raNum);
 
-   function initializeStudiedThemes() {
-        const grid = document.getElementById('studied-themes-grid');
-        if (!grid) return; // Sécurité
-        grid.innerHTML = '';
-        for (let i = 1; i <= 6; i++) {
-            const label = document.createElement('label');
-            label.innerHTML = `<input type="checkbox" id="studied-theme-${i}" value="${i}" checked> Theme ${i}: ${THEMES[i]}`;
-            grid.appendChild(label);
-        }
+  function initializeStudiedThemes() {
+    const grid = document.getElementById('studied-themes-grid');
+    if (!grid) return; 
+    grid.innerHTML = '';
+    for (let i = 1; i <= 6; i++) {
+        const label = document.createElement('label');
+        // Ajout de la classe 'studied-theme-checkbox' ici
+        label.innerHTML = `
+            <input type="checkbox" 
+                   id="studied-theme-${i}" 
+                   class="studied-theme-checkbox" 
+                   value="${i}" checked> 
+            Theme ${i}: ${THEMES[i]}`;
+        grid.appendChild(label);
     }
-    
+}
 function buildStateObject() {
     const state = { 
         students: [], 
@@ -366,22 +371,20 @@ function buildStateObject() {
     reader.readAsText(file);
 }
     
-  generateTableBtn.addEventListener('click', () => {
-        const studiedThemes = [];
-        for (let i = 1; i <= 6; i++) {
-            if (document.getElementById(`studied-theme-${i}`).checked) {
-                studiedThemes.push(i.toString());
-            }
-        }
-        if (studiedThemes.length < 2) {
-            allocationError.textContent = 'Please select at least two "Studied Themes" in Step 1.';
-            allocationError.style.display = 'block';
-            return;
-        } else {
-            allocationError.style.display = 'none';
-        }
+ generateTableBtn.addEventListener('click', () => {
+    const studiedThemes = [];
+    // On sélectionne toutes les cases cochées dans le bon conteneur
+    const checkboxes = document.querySelectorAll('#studied-themes-grid input[type="checkbox"]:checked');
+    checkboxes.forEach(cb => {
+        studiedThemes.push(cb.value);
+    });
 
-        // 1. SAUVEGARDE DES DONNÉES ACTUELLES
+    if (studiedThemes.length < 2) {
+        allocationError.textContent = 'Please select at least two "Studied Themes" in Step 1.';
+        allocationError.style.display = 'block';
+        return;
+    }
+           // 1. SAUVEGARDE DES DONNÉES ACTUELLES
         const oldData = {};
         allocationTableBody.querySelectorAll('tr').forEach(row => {
             const examNumber = row.cells[0].textContent.trim();
