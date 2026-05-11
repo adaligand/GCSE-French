@@ -4,60 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GCSE Speaking Card Allocator</title>
-     <style>
+    <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
         .section { background-color: #fdfdfd; border: 1px solid #dee2e6; border-radius: 5px; padding: 20px; }
-        .config-grid, .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .theme-grid label { display: flex; align-items: center; gap: 8px; font-weight: normal; }
-        .theme-grid input { width: 1.3em; height: 1.3em; }
-        /* MODIFIED: Reduced min-width to allow four columns on smaller screens */
         .initial-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 25px; }
         label { font-weight: 600; margin-bottom: 5px; display: block; }
-        input[type="text"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
+        input[type="text"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        button, .action-btn-label {
-            display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; line-height: 1.5; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; text-align: center; vertical-align: middle; transition: background-color 0.2s; box-sizing: border-box;
-        }
+        button, .action-btn-label { display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
-        .action-btn { background-color: #28a745; }
-        .action-btn:hover { background-color: #218838; }
-        .edit-btn { background-color: #ffc107; color: #212529; }
-        .edit-btn:hover { background-color: #e0a800; }
         .allocate-btn { background-color: #ff8c00; }
-        .export-btn { background-color: #17a2b8; margin-left: 10px; }
-        .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; margin-top: 10px; }
-        .shuffle-btn { background-color: #5856d6; margin-left: 10px; }
-        .shuffle-btn:hover { background-color: #4c4aa8; }
-        .alert { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
-        .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
-        .setup-action-btn { background-color: #e9ecef; color: #212529; font-weight: bold; }
-        .setup-action-btn:hover { background-color: #ced4da; }
+        .export-btn { background-color: #17a2b8; }
+        .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; }
+        .shuffle-btn { background-color: #5856d6; }
+        .setup-action-btn { background-color: #e9ecef; color: #212529; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #005a9c; color: white; }
         tr:nth-child(even) { background-color: #f2f2f2; }
-        .controls { display: flex; align-items: center; flex-wrap: wrap; }
-        .student-name[contenteditable]:focus, .exam-number[contenteditable]:focus, .tier[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
-        .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
+        .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; border: 1px solid rgba(0,0,0,0.1); }
         .theme-color-1 { background-color: #aed6f1; } .theme-color-2 { background-color: #a2d9ab; } .theme-color-3 { background-color: #f7dc6f; } .theme-color-4 { background-color: #d2b4de; } .theme-color-5 { background-color: #f1948a; } .theme-color-6 { background-color: #dfdfdf; }
-        
-        .rp-config-item { display: flex; align-items: center; gap: 10px; }
-        .rp-config-item label { display: inline-block; margin-bottom: 0; flex-shrink: 0; }
-        .rp-config-item select { width: auto; flex-grow: 1; }
-        .rp-config-container { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .exclude-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto;
-    grid-auto-flow: column;
-    gap: 10px 40px;
-}
-        .exclude-column { display: flex; flex-direction: column; gap: 15px; }
-        .exclude-item { display: flex; align-items: center; gap: 10px; }
-        .exclude-item label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0;}
-        .exclude-item input { max-width: 150px; }
+        .exclude-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
+        .exclude-item { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -66,9 +38,9 @@
         <h1> 📋 GCSE Speaking Card Allocator</h1>
         
         <div class="controls" style="padding: 20px 0; display: flex; gap: 10px; align-items: center;">
-            <button id="save-btn" class="setup-action-btn">💾 Save File</button>
-            <label for="load-input" class="action-btn-label setup-action-btn">📂 Load File</label>
-            <input type="file" id="load-input" accept=".json" style="display: none;">
+            <button id="save-json-btn" class="setup-action-btn">💾 Save File (JSON)</button>
+            <label for="load-json-input" class="action-btn-label setup-action-btn">📂 Load File (JSON)</label>
+            <input type="file" id="load-json-input" accept=".json" style="display: none;">
             <button id="generate-table-btn" class="setup-action-btn">🧩 Generate Table</button>
             <button id="edit-config-btn" class="setup-action-btn" style="display: none;">✏️ Edit Config</button>
             <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset Page</button>
@@ -104,7 +76,7 @@
                 <div style="display: flex; gap: 10px;">
                     <button id="shuffle-btn" class="shuffle-btn">🎲 Shuffle</button>
                     <button id="allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE</button>
-                    <button id="export-btn" class="export-btn">📄 Export Excel</button>
+                    <button id="export-excel-btn" class="export-btn">📄 Export Excel</button>
                 </div>
             </div>
             <div id="error-msg" style="color: red; display: none; margin-bottom: 10px; font-weight: bold;"></div>
@@ -131,54 +103,111 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('themes-grid').innerHTML = Object.entries(THEMES).map(([n, name]) => 
         `<label><input type="checkbox" class="theme-cb" value="${n}">${name}</label>`).join('');
 
-    // --- LOGIC: GENERATE TABLE ---
+    // --- FUNCTION: BUILD DATA STATE FOR SAVE ---
+    function getState() {
+        const students = [];
+        tbody.querySelectorAll('tr').forEach(row => {
+            students.push({
+                id: row.cells[0].textContent,
+                tier: row.cells[1].textContent,
+                name: row.cells[2].textContent,
+                c1: row.cells[3].dataset.tid,
+                c2: row.cells[4].dataset.tid,
+                selected: row.querySelector('.sel-theme').value,
+                ra: row.querySelector('.ra-res').innerHTML,
+                rp: row.querySelector('.rp-res').innerHTML,
+                pt: row.querySelector('.pt-res').innerHTML
+            });
+        });
+        return {
+            students,
+            studied: Array.from(document.querySelectorAll('.theme-cb:checked')).map(cb => cb.value),
+            excl: {
+                ra_f: document.getElementById('ex-ra-f').value, rp_f: document.getElementById('ex-rp-f').value, pt_f: document.getElementById('ex-pt-f').value,
+                ra_h: document.getElementById('ex-ra-h').value, rp_h: document.getElementById('ex-rp-h').value, pt_h: document.getElementById('ex-pt-h').value
+            }
+        };
+    }
+
+    // --- SAVE JSON ---
+    document.getElementById('save-json-btn').addEventListener('click', () => {
+        const state = getState();
+        const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `speaking_allocation_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+    });
+
+    // --- LOAD JSON ---
+    document.getElementById('load-json-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const data = JSON.parse(event.target.result);
+            // Restore Themes
+            document.querySelectorAll('.theme-cb').forEach(cb => cb.checked = data.studied.includes(cb.value));
+            // Restore Exclusions
+            document.getElementById('ex-ra-f').value = data.excl.ra_f; document.getElementById('ex-rp-f').value = data.excl.rp_f;
+            document.getElementById('ex-pt-f').value = data.excl.pt_f; document.getElementById('ex-ra-h').value = data.excl.ra_h;
+            document.getElementById('ex-rp-h').value = data.excl.rp_h; document.getElementById('ex-pt-h').value = data.excl.pt_h;
+            
+            // Restore Table
+            renderTable(data.students);
+            wrapper.style.display = 'none';
+            allocSec.style.display = 'block';
+            document.getElementById('generate-table-btn').style.display = 'none';
+            document.getElementById('edit-config-btn').style.display = 'inline-block';
+        };
+        reader.readAsText(file);
+    });
+
+    function renderTable(studentData) {
+        tbody.innerHTML = studentData.map(s => `
+            <tr class="${s.selected ? 'theme-color-' + s.selected : ''}">
+                <td contenteditable="true">${s.id}</td><td contenteditable="true">${s.tier}</td><td contenteditable="true">${s.name}</td>
+                <td data-tid="${s.c1}">${THEMES[s.c1]}</td><td data-tid="${s.c2}">${THEMES[s.c2]}</td>
+                <td><select class="sel-theme">
+                    <option value="">Select...</option>
+                    <option value="${s.c1}" ${s.selected==s.c1?'selected':''}>${THEMES[s.c1]}</option>
+                    <option value="${s.c2}" ${s.selected==s.c2?'selected':''}>${THEMES[s.c2]}</option>
+                </select></td>
+                <td class="result ra-res">${s.ra || ''}</td><td class="result rp-res">${s.rp || ''}</td><td class="result pt-res">${s.pt || ''}</td>
+            </tr>`).join('');
+        
+        tbody.querySelectorAll('.sel-theme').forEach(sel => {
+            sel.addEventListener('change', (e) => {
+                const row = e.target.closest('tr');
+                row.className = e.target.value ? `theme-color-${e.target.value}` : '';
+            });
+        });
+    }
+
+    // --- GENERATE TABLE ---
     document.getElementById('generate-table-btn').addEventListener('click', () => {
         const studied = Array.from(document.querySelectorAll('.theme-cb:checked')).map(cb => cb.value);
         if (studied.length < 2) return alert("Select at least 2 themes.");
-
         const lines = studentInput.value.trim().split('\n');
         const students = lines.map(line => {
             const p = line.split('\t');
-            return { id: (p[0]||'').trim(), tier: (p[1]||'').trim().toUpperCase(), name: `${p[2]||''} ${p[3]||''}`.trim() };
+            const pairs = [];
+            for(let i=0; i<studied.length; i++) for(let j=i+1; j<studied.length; j++) pairs.push([studied[i], studied[j]]);
+            const myPair = pairs[Math.floor(Math.random() * pairs.length)];
+            return { id: (p[0]||'').trim(), tier: (p[1]||'').trim().toUpperCase(), name: `${p[2]||''} ${p[3]||''}`.trim(), c1: myPair[0], c2: myPair[1], selected: '' };
         }).filter(s => s.name && s.id);
-
-        if (students.length === 0) return alert("No valid student data found.");
-
-        const pairs = [];
-        for(let i=0; i<studied.length; i++) for(let j=i+1; j<studied.length; j++) pairs.push([studied[i], studied[j]]);
-        
-        tbody.innerHTML = students.map((s, i) => {
-            const p = pairs[i % pairs.length];
-            const [c1, c2] = Math.random() > 0.5 ? [p[0], p[1]] : [p[1], p[0]];
-            return `<tr>
-                <td contenteditable="true">${s.id}</td><td contenteditable="true">${s.tier}</td><td contenteditable="true">${s.name}</td>
-                <td data-tid="${c1}">${THEMES[c1]}</td><td data-tid="${c2}">${THEMES[c2]}</td>
-                <td><select class="sel-theme"><option value="">Select...</option><option value="${c1}">${THEMES[c1]}</option><option value="${c2}">${THEMES[c2]}</option></select></td>
-                <td class="result ra-res"></td><td class="result rp-res"></td><td class="result pt-res"></td>
-            </tr>`;
-        }).join('');
-
+        renderTable(students);
         wrapper.style.display = 'none';
         allocSec.style.display = 'block';
         document.getElementById('generate-table-btn').style.display = 'none';
         document.getElementById('edit-config-btn').style.display = 'inline-block';
-        
-        // Dynamic color for dropdowns
-        tbody.querySelectorAll('.sel-theme').forEach(sel => {
-            sel.addEventListener('change', (e) => {
-                e.target.parentElement.className = e.target.value ? `theme-color-${e.target.value}` : '';
-            });
-        });
     });
 
-    // --- LOGIC: AUTO ALLOCATE ---
+    // --- AUTO ALLOCATE ---
     document.getElementById('allocate-btn').addEventListener('click', () => {
-        const err = document.getElementById('error-msg');
-        err.style.display = 'none';
-        
+        const err = document.getElementById('error-msg'); err.style.display = 'none';
         const counters = { H: { ra: {}, rp: {}, pt: {} }, F: { ra: {}, rp: {}, pt: {} } };
         [1,2,3,4,5,6].forEach(n => { ['H','F'].forEach(t => { counters[t].ra[n]=0; counters[t].rp[n]=0; counters[t].pt[n]=0; })});
-
         const getEx = (id) => document.getElementById(id).value.split(',').map(s => s.trim()).filter(Boolean);
         const excl = {
             H: { ra: getEx('ex-ra-h'), rp: getEx('ex-rp-h'), pt: getEx('ex-pt-h') },
@@ -189,78 +218,56 @@ document.addEventListener('DOMContentLoaded', () => {
             const tier = row.cells[1].textContent.trim().toUpperCase();
             const selected = row.querySelector('.sel-theme').value;
             if (!selected) return;
-
             const sNum = parseInt(selected);
-            const c = counters[tier];
-            const ex = excl[tier];
-
-            // 1. Photo Card
+            const c = counters[tier]; const ex = excl[tier];
             const ptOpts = [(sNum-1)*3+1, (sNum-1)*3+2, (sNum-1)*3+3].filter(n => !ex.pt.includes(n.toString()));
             const ptCard = ptOpts[c.pt[sNum]++ % ptOpts.length];
-
-            // 2. RA & RP
             let aRa, aRp;
             const vRa = [1,2,3,4,5,6].filter(n => n !== sNum && !ex.ra.includes(n.toString())).sort((a,b) => c.ra[a] - c.ra[b]);
             const vRp = [1,2,3,4,5,6].filter(n => n !== sNum && !ex.rp.includes(n.toString())).sort((a,b) => c.rp[a] - c.rp[b]);
-
-            for (let ra of vRa) {
-                for (let rp of vRp) {
-                    if (ra !== rp) { aRa = ra; aRp = rp; break; }
-                }
-                if (aRa) break;
-            }
-
+            for (let ra of vRa) { for (let rp of vRp) { if (ra !== rp) { aRa = ra; aRp = rp; break; } } if (aRa) break; }
             if (aRa && aRp) {
                 c.ra[aRa]++; c.rp[aRp]++;
                 row.querySelector('.ra-res').innerHTML = `<span class="theme-color-${aRa}">RA${aRa}</span>`;
                 row.querySelector('.rp-res').innerHTML = `<span class="theme-color-${aRp}">RP${aRp}</span>`;
                 row.querySelector('.pt-res').innerHTML = `<span class="theme-color-${sNum}">PT${ptCard}</span>`;
-            } else {
-                err.textContent = "Allocation Conflict: Try shuffling or check exclusions.";
-                err.style.display = 'block';
-            }
+            } else { err.style.display = 'block'; err.textContent = "Allocation Error: Too many exclusions or not enough themes."; }
         });
     });
 
-    // --- LOGIC: SHUFFLE ---
+    // --- SHUFFLE ---
     document.getElementById('shuffle-btn').addEventListener('click', () => {
         const studied = Array.from(document.querySelectorAll('.theme-cb:checked')).map(cb => cb.value);
         const pairs = [];
         for(let i=0; i<studied.length; i++) for(let j=i+1; j<studied.length; j++) pairs.push([studied[i], studied[j]]);
-        
-        tbody.querySelectorAll('tr').forEach((row, i) => {
+        tbody.querySelectorAll('tr').forEach(row => {
             const p = pairs[Math.floor(Math.random() * pairs.length)];
             const [c1, c2] = Math.random() > 0.5 ? [p[0], p[1]] : [p[1], p[0]];
-            
             row.cells[3].dataset.tid = c1; row.cells[3].textContent = THEMES[c1];
             row.cells[4].dataset.tid = c2; row.cells[4].textContent = THEMES[c2];
-            
             const sel = row.querySelector('.sel-theme');
             sel.innerHTML = `<option value="">Select...</option><option value="${c1}">${THEMES[c1]}</option><option value="${c2}">${THEMES[c2]}</option>`;
-            sel.parentElement.className = '';
-            row.querySelectorAll('.result').forEach(r => r.innerHTML = '');
+            row.className = ''; row.querySelectorAll('.result').forEach(r => r.innerHTML = '');
         });
     });
 
-    // --- LOGIC: EXPORT ---
-    document.getElementById('export-btn').addEventListener('click', () => {
+    // --- EXPORT EXCEL ---
+    document.getElementById('export-excel-btn').addEventListener('click', () => {
         let html = "<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid black;border-collapse:collapse;padding:5px;}</style></head><body><table>";
-        html += document.getElementById('main-table').innerHTML.replace(/<select.*?>.*?<\/select>/g, (match) => {
-            const val = match.match(/value="(\d+)"/);
-            return val ? THEMES[val[1]] : "";
+        html += "<tr><th>Exam Nbr</th><th>Tier</th><th>Name</th><th>Selected</th><th>RA</th><th>RP</th><th>PT</th></tr>";
+        tbody.querySelectorAll('tr').forEach(row => {
+            const selVal = row.querySelector('.sel-theme').value;
+            html += `<tr><td>${row.cells[0].textContent}</td><td>${row.cells[1].textContent}</td><td>${row.cells[2].textContent}</td>
+            <td>${selVal ? THEMES[selVal] : ''}</td><td>${row.querySelector('.ra-res').textContent}</td>
+            <td>${row.querySelector('.rp-res').textContent}</td><td>${row.querySelector('.pt-res').textContent}</td></tr>`;
         });
         html += "</table></body></html>";
         const blob = new Blob([html], {type: 'application/vnd.ms-excel'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'allocation.xls';
-        a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'allocation.xls'; a.click();
     });
 
-    // --- UTILS ---
     document.getElementById('edit-config-btn').addEventListener('click', () => {
-        wrapper.style.display = 'grid';
-        allocSec.style.display = 'none';
+        wrapper.style.display = 'grid'; allocSec.style.display = 'none';
         document.getElementById('generate-table-btn').style.display = 'inline-block';
         document.getElementById('edit-config-btn').style.display = 'none';
     });
