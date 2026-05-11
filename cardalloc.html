@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE  Card Allocator</title>
+    <title>GCSE c Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -105,7 +105,7 @@
 
         <div class="section" id="allocation-section" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
-                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">5: Set Themes & Allocate Cards</h2>
+                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">4: Set Themes & Allocate Cards</h2>
                 <div>
                     <button id="shuffle-choices-btn" class="shuffle-btn">🎲 Shuffle</button>
                     <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE</button>
@@ -170,111 +170,115 @@ document.addEventListener('DOMContentLoaded', () => {
         rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
     }
     
-  function buildStateObject() {
-        const state = { 
-            students: [], 
-            rpLocked: allocationSection.style.display === 'block', 
-            studiedThemes: [], 
-            excludedCards: {} 
-        };
-        
-        // On récupère les thèmes étudiés cochés
-        for (let i = 1; i <= 6; i++) {
-            if (document.getElementById(`studied-theme-${i}`).checked) {
-                state.studiedThemes.push(i.toString());
+function buildStateObject() {
+    const state = { 
+        students: [], 
+        rpLocked: allocationSection.style.display === 'block', 
+        studiedThemes: [], 
+        excludedCards: {} 
+    };
+    
+    // Sauvegarde des thèmes cochés à l'étape 1
+    for (let i = 1; i <= 6; i++) {
+        const cb = document.getElementById(`studied-theme-${i}`);
+        if (cb && cb.checked) {
+            state.studiedThemes.push(i.toString());
+        }
+    }
+    
+    // Sauvegarde des exclusions de l'étape 3
+    state.excludedCards.ra = { f: document.getElementById('exclude-ra-f-input').value, h: document.getElementById('exclude-ra-h-input').value };
+    state.excludedCards.rp = { f: document.getElementById('exclude-rp-f-input').value, h: document.getElementById('exclude-rp-h-input').value };
+    state.excludedCards.pt = { f: document.getElementById('exclude-pt-f-input').value, h: document.getElementById('exclude-pt-h-input').value };
+
+    // Sauvegarde des données du tableau d'allocation
+    if (allocationTableBody.innerHTML) {
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            state.students.push({
+                examNumber: row.cells[0].textContent,
+                tier: row.cells[1].textContent,
+                name: row.cells[2].textContent,
+                choice1: row.cells[3].dataset.themeId, 
+                choice2: row.cells[4].dataset.themeId,
+                selected: row.querySelector('.selected-theme').value, 
+                ra: row.querySelector('.ra-result').innerHTML, 
+                rp: row.querySelector('.rp-result').innerHTML, 
+                pt: row.querySelector('.photo-result').innerHTML
+            });
+        });
+    }
+    return state;
+}
+  function populatePageFromState(state) {
+    if (!state) return;
+    allocationTableBody.innerHTML = '';
+    studentNamesInput.value = '';
+    allocationSection.style.display = 'none';
+    initialSetupWrapper.style.display = 'grid';
+    
+    generateTableBtn.style.display = 'inline-block';
+    editConfigBtn.style.display = 'none';
+
+    // Restauration des thèmes étudiés
+    if (state.studiedThemes && state.studiedThemes.length > 0) {
+        for (let i = 1; i <= 6; i++) document.getElementById(`studied-theme-${i}`).checked = false;
+        state.studiedThemes.forEach(themeNum => {
+            const checkbox = document.getElementById(`studied-theme-${themeNum}`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    
+    // Restauration des exclusions
+    if(state.excludedCards) {
+        document.getElementById('exclude-ra-f-input').value = state.excludedCards.ra?.f || '';
+        document.getElementById('exclude-ra-h-input').value = state.excludedCards.ra?.h || '';
+        document.getElementById('exclude-rp-f-input').value = state.excludedCards.rp?.f || '';
+        document.getElementById('exclude-rp-h-input').value = state.excludedCards.rp?.h || '';
+        document.getElementById('exclude-pt-f-input').value = state.excludedCards.pt?.f || '';
+        document.getElementById('exclude-pt-h-input').value = state.excludedCards.pt?.h || '';
+    }
+
+    // Verrouillage des inputs si l'allocation est déjà faite
+    document.querySelectorAll('#studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = state.rpLocked);
+
+    // Reconstruction du tableau si des étudiants sont présents
+    if (state.students && state.students.length > 0) {
+        allocationTableBody.innerHTML = state.students.map(s => {
+            const choice1 = s.choice1 || '';
+            const choice2 = s.choice2 || '';
+            return `<tr>
+                <td class="exam-number" contenteditable="true">${s.examNumber}</td>
+                <td class="tier" contenteditable="true">${s.tier}</td>
+                <td class="student-name" contenteditable="true">${s.name}</td>
+                <td class="theme-choice-1" data-theme-id="${choice1}">${THEMES[choice1] || ''}</td>
+                <td class="theme-choice-2" data-theme-id="${choice2}">${THEMES[choice2] || ''}</td>
+                <td><select class="selected-theme" disabled><option value="">-</option></select></td>
+                <td class="result ra-result"></td>
+                <td class="result rp-result"></td>
+                <td class="result photo-result"></td>
+            </tr>`;
+        }).join('');
+
+        allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
+            const s = state.students[index];
+            if (s) {
+                const selectedThemeDropdown = row.querySelector('.selected-theme');
+                updateSelectedThemeForRow(row);
+                selectedThemeDropdown.value = s.selected;
+                colorCodeSelectedTheme(selectedThemeDropdown);
+                row.querySelector('.ra-result').innerHTML = s.ra;
+                row.querySelector('.rp-result').innerHTML = s.rp;
+                row.querySelector('.photo-result').innerHTML = s.pt;
             }
-        }
-        
-        // On récupère les exclusions
-        state.excludedCards.ra = { f: document.getElementById('exclude-ra-f-input').value, h: document.getElementById('exclude-ra-h-input').value };
-        state.excludedCards.rp = { f: document.getElementById('exclude-rp-f-input').value, h: document.getElementById('exclude-rp-h-input').value };
-        state.excludedCards.pt = { f: document.getElementById('exclude-pt-f-input').value, h: document.getElementById('exclude-pt-h-input').value };
+        });
 
-        // On récupère les données du tableau
-        if (allocationTableBody.innerHTML) {
-            allocationTableBody.querySelectorAll('tr').forEach(row => {
-                state.students.push({
-                    examNumber: row.cells[0].textContent,
-                    tier: row.cells[1].textContent,
-                    name: row.cells[2].textContent,
-                    choice1: row.cells[3].dataset.themeId, 
-                    choice2: row.cells[4].dataset.themeId,
-                    selected: row.querySelector('.selected-theme').value, 
-                    ra: row.querySelector('.ra-result').innerHTML, 
-                    rp: row.querySelector('.rp-result').innerHTML, 
-                    pt: row.querySelector('.photo-result').innerHTML
-                });
-            });
-        }
-        return state;
+        initialSetupWrapper.style.display = 'none';
+        allocationSection.style.display = 'block';
+        generateTableBtn.style.display = 'none';
+        editConfigBtn.style.display = 'inline-block';
+        addTableEventListeners();
     }
-
-    function populatePageFromState(state) {
-        if (!state) return;
-        allocationTableBody.innerHTML = '';
-        studentNamesInput.value = '';
-        allocationSection.style.display = 'none';
-        initialSetupWrapper.style.display = 'grid';
-        
-        generateTableBtn.style.display = 'inline-block';
-        editConfigBtn.style.display = 'none';
-
-               if (state.studiedThemes && state.studiedThemes.length > 0) {
-            for (let i = 1; i <= 6; i++) document.getElementById(`studied-theme-${i}`).checked = false;
-            state.studiedThemes.forEach(themeNum => {
-                const checkbox = document.getElementById(`studied-theme-${themeNum}`);
-                if (checkbox) checkbox.checked = true;
-            });
-        }
-        
-        if(state.excludedCards) {
-            document.getElementById('exclude-ra-f-input').value = state.excludedCards.ra?.f || '';
-            document.getElementById('exclude-ra-h-input').value = state.excludedCards.ra?.h || '';
-            document.getElementById('exclude-rp-f-input').value = state.excludedCards.rp?.f || '';
-            document.getElementById('exclude-rp-h-input').value = state.excludedCards.rp?.h || '';
-            document.getElementById('exclude-pt-f-input').value = state.excludedCards.pt?.f || '';
-            document.getElementById('exclude-pt-h-input').value = state.excludedCards.pt?.h || '';
-        }
-
-       document.querySelectorAll('#studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = state.rpLocked);
-
-        if (state.students && state.students.length > 0) {
-            allocationTableBody.innerHTML = state.students.map(s => {
-                const choice1 = s.choice1 || '';
-                const choice2 = s.choice2 || '';
-                return `<tr>
-                    <td class="exam-number" contenteditable="true">${s.examNumber}</td>
-                    <td class="tier" contenteditable="true">${s.tier}</td>
-                    <td class="student-name" contenteditable="true">${s.name}</td>
-                    <td class="theme-choice-1" data-theme-id="${choice1}">${THEMES[choice1] || ''}</td>
-                    <td class="theme-choice-2" data-theme-id="${choice2}">${THEMES[choice2] || ''}</td>
-                    <td><select class="selected-theme" disabled><option value="">-</option></select></td>
-                    <td class="result ra-result"></td>
-                    <td class="result rp-result"></td>
-                    <td class="result photo-result"></td>
-                </tr>`;
-            }).join('');
-
-            allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
-                const s = state.students[index];
-                if (s) {
-                    const selectedThemeDropdown = row.querySelector('.selected-theme');
-                    updateSelectedThemeForRow(row);
-                    selectedThemeDropdown.value = s.selected;
-                    colorCodeSelectedTheme(selectedThemeDropdown);
-                    row.querySelector('.ra-result').innerHTML = s.ra;
-                    row.querySelector('.rp-result').innerHTML = s.rp;
-                    row.querySelector('.photo-result').innerHTML = s.pt;
-                }
-            });
-
-            initialSetupWrapper.style.display = 'none';
-            allocationSection.style.display = 'block';
-            generateTableBtn.style.display = 'none';
-            editConfigBtn.style.display = 'inline-block';
-            addTableEventListeners();
-        }
-    }
+}
 
     function exportToExcel() {
         const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
@@ -341,28 +345,27 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { confirmMsg.style.display = 'none'; }, 2000);
     }
 
-    function loadAllocationFromFile(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const content = e.target.result;
-            try {
-                const state = JSON.parse(content);
-                if (state.rpConfig) {
-                    populatePageFromState(state);
-                } else {
-                    throw new Error("Invalid file format.");
-                }
-            } catch (error) {
-                alert("Error: Could not load the file. It might be corrupted or not a valid allocation file.");
+  function loadAllocationFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        try {
+            const state = JSON.parse(content);
+            // Changed check from rpConfig to studiedThemes
+            if (state.studiedThemes) {
+                populatePageFromState(state);
+            } else {
+                throw new Error("Invalid file format.");
             }
-            event.target.value = '';
-        };
-        reader.readAsText(file);
-    }
-
-    let rpThemeMap = {};
+        } catch (error) {
+            alert("Error: Could not load the file. It might be from an older version or corrupted.");
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
     
     generateTableBtn.addEventListener('click', () => {
         const studiedThemes = [];
@@ -407,7 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (studentData.length === 0) return;
 
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = true);
+       // Removed the reference to #rp-config-grid select
+document.querySelectorAll('#studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = true);
 
         const themePairs = [];
         for (let i = 0; i < studiedThemes.length; i++) {
@@ -715,7 +719,6 @@ document.addEventListener('DOMContentLoaded', () => {
     exportExcelBtnBottom.addEventListener('click', exportToExcel);
 
     initializeStudiedThemes();
-    initializeRpConfig();
 });
 </script>
 
