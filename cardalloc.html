@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE c Card Allocator</title>
+    <title>GCSE d Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -367,7 +367,7 @@ function buildStateObject() {
     reader.readAsText(file);
 }
     
-    generateTableBtn.addEventListener('click', () => {
+  generateTableBtn.addEventListener('click', () => {
         const studiedThemes = [];
         for (let i = 1; i <= 6; i++) {
             if (document.getElementById(`studied-theme-${i}`).checked) {
@@ -375,27 +375,123 @@ function buildStateObject() {
             }
         }
         if (studiedThemes.length < 2) {
-            allocationError.textContent = 'Please select at least two "Studied Themes" in Step 1 before creating the table.';
+            allocationError.textContent = 'Please select at least two "Studied Themes" in Step 1.';
             allocationError.style.display = 'block';
             return;
         } else {
             allocationError.style.display = 'none';
         }
 
+        // 1. SAUVEGARDE DES DONNÉES ACTUELLES
         const oldData = {};
         allocationTableBody.querySelectorAll('tr').forEach(row => {
             const examNumber = row.cells[0].textContent.trim();
-            if (examNumber) oldData[examNumber] = { 
-                tier: row.cells[1].textContent.trim(),
-                name: row.cells[2].textContent.trim(),
-                choice1: row.cells[3].dataset.themeId, 
-                choice2: row.cells[4].dataset.themeId,
-                selected: row.querySelector('.selected-theme').value, 
-                ra: row.querySelector('.ra-result').innerHTML, 
-                rp: row.querySelector('.rp-result').innerHTML, 
-                pt: row.querySelector('.photo-result').innerHTML 
-            };
+            if (examNumber) {
+                oldData[examNumber] = { 
+                    tier: row.cells[1].textContent.trim(),
+                    name: row.cells[2].textContent.trim(),
+                    choice1: row.cells[3].dataset.themeId, 
+                    choice2: row.cells[4].dataset.themeId,
+                    selected: row.querySelector('.selected-theme').value, 
+                    ra: row.querySelector('.ra-result').innerHTML, 
+                    rp: row.querySelector('.rp-result').innerHTML, 
+                    pt: row.querySelector('.photo-result').innerHTML 
+                };
+            }
         });
+
+        const lines = studentNamesInput.value.trim().split('\n');
+        const studentData = lines.map(line => {
+            const parts = line.split('\t');
+            const examNumber = (parts[0] || '').trim();
+            const tier = (parts[1] || '').trim().toUpperCase();
+            const firstName = (parts[2] || '').trim();
+            const lastName = (parts[3] || '').trim();
+            const name = `${firstName} ${lastName}`.trim();
+            return { examNumber, tier, name };
+        }).filter(s => s.name && s.examNumber && s.tier);
+
+        if (studentData.length === 0) return;
+
+        // Désactiver les réglages
+        document.querySelectorAll('#studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = true);
+
+        // Préparation des paires de thèmes pour les nouveaux étudiants
+        const themePairs = [];
+        for (let i = 0; i < studiedThemes.length; i++) {
+            for (let j = i + 1; j < studiedThemes.length; j++) {
+                themePairs.push([studiedThemes[i], studiedThemes[j]]);
+            }
+        }
+        // Mélange aléatoire des paires
+        for (let i = themePairs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [themePairs[i], themePairs[j]] = [themePairs[j], themePairs[i]];
+        }
+        
+        // 2. GÉNÉRATION DU NOUVEAU TABLEAU
+        allocationTableBody.innerHTML = studentData.map((s, index) => {
+            const saved = oldData[s.examNumber];
+            let c1, c2;
+
+            // Si l'étudiant existait et que ses thèmes sont toujours valides dans Step 1
+            if (saved && studiedThemes.includes(saved.choice1) && studiedThemes.includes(saved.choice2)) {
+                c1 = saved.choice1;
+                c2 = saved.choice2;
+            } else {
+                // Sinon, on lui donne une nouvelle paire aléatoire
+                const pair = themePairs[index % themePairs.length];
+                [c1, c2] = Math.random() < 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+            }
+
+            return `<tr>
+                <td class="exam-number" contenteditable="true">${s.examNumber}</td>
+                <td class="tier" contenteditable="true">${s.tier}</td>
+                <td class="student-name" contenteditable="true">${s.name}</td>
+                <td class="theme-choice-1" data-theme-id="${c1}">${THEMES[c1]}</td>
+                <td class="theme-choice-2" data-theme-id="${c2}">${THEMES[c2]}</td>
+                <td><select class="selected-theme" disabled><option value="">-</option></select></td>
+                <td class="result ra-result"></td>
+                <td class="result rp-result"></td>
+                <td class="result photo-result"></td>
+            </tr>`;
+        }).join('');
+        
+        // 3. RESTAURATION DES ALLOCATIONS (CARTES)
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const examNumber = row.cells[0].textContent.trim();
+            const saved = oldData[examNumber];
+            
+            if (saved) {
+                const dropdown = row.querySelector('.selected-theme');
+                updateSelectedThemeForRow(row);
+                
+                // On ne restaure que si le thème sélectionné fait toujours partie des deux choix
+                const currentC1 = row.cells[3].dataset.themeId;
+                const currentC2 = row.cells[4].dataset.themeId;
+                
+                if (saved.selected && (saved.selected === currentC1 || saved.selected === currentC2)) {
+                    dropdown.value = saved.selected;
+                    colorCodeSelectedTheme(dropdown);
+                    
+                    // On restaure les cartes uniquement si le Tier (H/F) n'a pas changé
+                    if (row.cells[1].textContent.trim().toUpperCase() === saved.tier.toUpperCase()) {
+                        row.querySelector('.ra-result').innerHTML = saved.ra; 
+                        row.querySelector('.rp-result').innerHTML = saved.rp; 
+                        row.querySelector('.photo-result').innerHTML = saved.pt;
+                    }
+                }
+            } else {
+                updateSelectedThemeForRow(row);
+            }
+        });
+
+        initialSetupWrapper.style.display = 'none';
+        allocationSection.style.display = 'block';
+        generateTableBtn.style.display = 'none';
+        editConfigBtn.style.display = 'inline-block';
+        addTableEventListeners();
+    });
 
         const lines = studentNamesInput.value.trim().split('\n');
         const studentData = lines.map(line => {
