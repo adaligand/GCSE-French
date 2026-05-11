@@ -541,43 +541,80 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function applyCardColor(cell, cardText, currentRpThemeMap, tier) {
+    function applyCardColor(cell, cardText, tier) {
         cell.innerHTML = '';
         if (!cardText) return;
+        
         const cardNum = parseInt(cardText.match(/\d+/)[0]);
         let themeNum = 0;
-        if (cardText.startsWith('PT')) themeNum = getThemeFromPhoto(cardNum);
-        else if (cardText.startsWith('RA')) themeNum = getThemeFromRa(cardNum);
-        else if (cardText.startsWith('RP')) themeNum = currentRpThemeMap[cardNum];
-        if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
+        
+        if (cardText.startsWith('PT')) {
+            themeNum = getThemeFromPhoto(cardNum);
+        } else if (cardText.startsWith('RA')) {
+            themeNum = getThemeFromRa(cardNum);
+        } else if (cardText.startsWith('RP')) {
+            // NOUVEAU : Le thème du RP est égal à son propre numéro
+            themeNum = cardNum; 
+        }
+        
+        if (themeNum > 0 && themeNum <= 6) {
+            cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
+        } else {
+            cell.innerHTML = `<span>${cardText} (${tier})</span>`;
+        }
     }
 
     autoAllocateBtn.addEventListener('click', () => {
-       
         allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
-
-        for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
         allocationError.style.display = 'none';
 
-        const excludedRa = {
-            f: document.getElementById('exclude-ra-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
-            h: document.getElementById('exclude-ra-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
-        };
-        const excludedRp = {
-            f: document.getElementById('exclude-rp-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
-            h: document.getElementById('exclude-rp-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
-        };
-        const excludedPt = {
-            f: document.getElementById('exclude-pt-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
-            h: document.getElementById('exclude-pt-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+        const getExcl = (id) => document.getElementById(id).value.split(',').map(n => n.trim()).filter(Boolean);
+        const excluded = {
+            f: { ra: getExcl('exclude-ra-f-input'), rp: getExcl('exclude-rp-f-input'), pt: getExcl('exclude-pt-f-input') },
+            h: { ra: getExcl('exclude-ra-h-input'), rp: getExcl('exclude-rp-h-input'), pt: getExcl('exclude-pt-h-input') }
         };
 
         const counters = { H: { photo: {}, ra: {}, rp: {} }, F: { photo: {}, ra: {}, rp: {} } };
-        ['H', 'F'].forEach(tier => {
-            for(let i=1; i<=6; i++) { 
-                counters[tier].photo[i] = 0; counters[tier].ra[i] = 0; counters[tier].rp[i] = 0;
+        ['H', 'F'].forEach(t => { for(let i=1; i<=6; i++) { counters[t].photo[i]=0; counters[t].ra[i]=0; counters[t].rp[i]=0; }});
+
+        let allocationsMade = 0;
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
+            const tier = row.cells[1].textContent.trim().toUpperCase();
+            if (!selectedTheme || (tier !== 'H' && tier !== 'F')) return;
+
+            const tCount = counters[tier];
+            const tKey = tier.toLowerCase();
+
+            // 1. Photo (PT)
+            const ptCards = [(selectedTheme-1)*3+1, (selectedTheme-1)*3+2, (selectedTheme-1)*3+3].filter(c => !excluded[tKey].pt.includes(c.toString()));
+            const photoCard = ptCards[tCount.photo[selectedTheme]++ % ptCards.length];
+
+            // 2. RA & RP (RP sans thème manuel, mais avec couleur auto)
+            let assignedRa, assignedRp;
+            // RA : Différent du thème choisi
+            const validRa = [1,2,3,4,5,6].filter(n => n !== selectedTheme && !excluded[tKey].ra.includes(n.toString())).sort((a,b) => tCount.ra[a] - tCount.ra[b]);
+            // RP : Différent du thème choisi
+            const validRp = [1,2,3,4,5,6].filter(n => n !== selectedTheme && !excluded[tKey].rp.includes(n.toString())).sort((a,b) => tCount.rp[a] - tCount.rp[b]);
+
+            for (let ra of validRa) {
+                for (let rp of validRp) {
+                    if (ra !== rp) { // Évite que RA et RP aient la même couleur
+                        assignedRa = ra; assignedRp = rp; break;
+                    }
+                }
+                if (assignedRa) break;
+            }
+
+            if (assignedRa && assignedRp) {
+                tCount.ra[assignedRa]++; tCount.rp[assignedRp]++;
+                applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, tier);
+                applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, tier);
+                applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, tier);
+                allocationsMade++;
             }
         });
+    });
 
         const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
         let allocationsMade = 0;
