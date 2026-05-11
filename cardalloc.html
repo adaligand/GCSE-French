@@ -81,12 +81,7 @@
                 <div id="studied-themes-grid" class="theme-grid"></div>
             </div>
 
-            <div class="section" id="setup-section">
-                <h2>2: RP Themes</h2>
-                <div class="rp-config-container" id="rp-config-grid"></div>
-            </div>
-            
-            <div class="section" id="exclude-cards-section">
+           <div class="section" id="exclude-cards-section">
 
     <h2>3: Exclude Cards</h2>
     <p>Optional : Enter cards to exclude, separated by commas (e.g., 1, 5, 9).</p>
@@ -560,93 +555,78 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
     }
 
-    autoAllocateBtn.addEventListener('click', () => {
-       
-        allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
+   autoAllocateBtn.addEventListener('click', () => {
+    allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
+    allocationError.style.display = 'none';
 
-        for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
-        allocationError.style.display = 'none';
+    // 1. Récupération des exclusions (RA, RP, PT)
+    const excludedRa = {
+        f: document.getElementById('exclude-ra-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+        h: document.getElementById('exclude-ra-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+    };
+    const excludedRp = {
+        f: document.getElementById('exclude-rp-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+        h: document.getElementById('exclude-rp-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+    };
+    const excludedPt = {
+        f: document.getElementById('exclude-pt-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+        h: document.getElementById('exclude-pt-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+    };
 
-        const excludedRa = {
-            f: document.getElementById('exclude-ra-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
-            h: document.getElementById('exclude-ra-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
-        };
-        const excludedRp = {
-            f: document.getElementById('exclude-rp-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
-            h: document.getElementById('exclude-rp-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
-        };
-        const excludedPt = {
-            f: document.getElementById('exclude-pt-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
-            h: document.getElementById('exclude-pt-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
-        };
-
-        const counters = { H: { photo: {}, ra: {}, rp: {} }, F: { photo: {}, ra: {}, rp: {} } };
-        ['H', 'F'].forEach(tier => {
-            for(let i=1; i<=6; i++) { 
-                counters[tier].photo[i] = 0; counters[tier].ra[i] = 0; counters[tier].rp[i] = 0;
-            }
-        });
-
-        const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
-        let allocationsMade = 0;
-        
-        rows.forEach(row => {
-            const hasSelectedTheme = !!row.querySelector('.selected-theme').value;
-
-            if (!hasSelectedTheme) {
-                return;
-            }
-
-            const tier = row.cells[1].textContent.trim().toUpperCase();
-            if (tier !== 'H' && tier !== 'F') {
-                allocationError.textContent = `Error: Invalid tier for ${row.cells[2].textContent}. Please use 'H' or 'F'.`;
-                allocationError.style.display = 'block';
-                return;
-            };
-
-            const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
-            const tierCounters = counters[tier];
-
-            const allPhotoCardsForTheme = [(selectedTheme - 1) * 3 + 1, (selectedTheme - 1) * 3 + 2, (selectedTheme - 1) * 3 + 3];
-            const validPhotoCards = allPhotoCardsForTheme.filter(c => !excludedPt[tier.toLowerCase()].includes(c.toString()));
-            if (validPhotoCards.length === 0) {
-                allocationError.textContent = `CRITICAL ERROR: All Photo Cards for Theme ${selectedTheme} are excluded for Tier ${tier}. Cannot allocate for ${row.cells[2].textContent}.`;
-                allocationError.style.display = 'block'; return;
-            }
-            const photoCard = validPhotoCards[tierCounters.photo[selectedTheme]++ % validPhotoCards.length];
-
-            let validRa = Object.keys(tierCounters.ra).filter(r => getThemeFromRa(r) !== selectedTheme && !excludedRa[tier.toLowerCase()].includes(r)).sort((a,b) => tierCounters.ra[a] - tierCounters.ra[b]);
-            let validRp = Object.keys(tierCounters.rp).filter(r => rpThemeMap[r] !== selectedTheme && !excludedRp[tier.toLowerCase()].includes(r)).sort((a,b) => tierCounters.rp[a] - tierCounters.rp[b]);
-            
-            let assignedRa, assignedRp;
-            for (const ra of validRa) {
-                for (const rp of validRp) { 
-                    if (getThemeFromRa(ra) !== rpThemeMap[rp]) { 
-                        assignedRa = ra; assignedRp = rp; break; 
-                    }
-                }
-                if (assignedRa) break;
-            }
-
-            if (!assignedRa || !assignedRp) {
-                 allocationError.textContent = `CRITICAL ERROR: Could not find a valid non-conflicting RA/RP pair for ${row.cells[2].textContent}.`;
-                 allocationError.style.display = 'block'; return;
-            }
-
-            tierCounters.ra[assignedRa]++;
-            tierCounters.rp[assignedRp]++;
-
-            applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, rpThemeMap, tier);
-            applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, rpThemeMap, tier);
-            applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, rpThemeMap, tier);
-            allocationsMade++;
-        });
-
-        if (allocationsMade === 0) {
-            allocationError.textContent = 'No students had a selected theme. Please make selections before allocating cards.';
-            allocationError.style.display = 'block';
-        }
+    // 2. Initialisation des compteurs pour la distribution
+    const counters = { H: { photo: {}, ra: {}, rp: {} }, F: { photo: {}, ra: {}, rp: {} } };
+    ['H', 'F'].forEach(tier => {
+        // Photo et RA vont de 1 à 6 (basés sur les thèmes)
+        for(let i=1; i<=6; i++) { counters[tier].photo[i] = 0; counters[tier].ra[i] = 0; }
+        // RP vont de 1 à 6 (numéros de cartes bruts)
+        for(let i=1; i<=6; i++) { counters[tier].rp[i] = 0; }
     });
+
+    const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
+    let allocationsMade = 0;
+    
+    rows.forEach(row => {
+        const selectedVal = row.querySelector('.selected-theme').value;
+        if (!selectedVal) return;
+
+        const tier = row.cells[1].textContent.trim().toUpperCase();
+        if (tier !== 'H' && tier !== 'F') return;
+
+        const selectedTheme = parseInt(selectedVal);
+        const tierCounters = counters[tier];
+
+        // --- ALLOCATION PHOTO (Liée au thème sélectionné) ---
+        const allPhotoCards = [(selectedTheme - 1) * 3 + 1, (selectedTheme - 1) * 3 + 2, (selectedTheme - 1) * 3 + 3];
+        const validPhotos = allPhotoCards.filter(c => !excludedPt[tier.toLowerCase()].includes(c.toString()));
+        const photoCard = validPhotos[tierCounters.photo[selectedTheme]++ % validPhotos.length];
+
+        // --- ALLOCATION RA (Liée à un thème différent de la Photo) ---
+        const validRaThemes = [1,2,3,4,5,6].filter(t => t !== selectedTheme && !excludedRa[tier.toLowerCase()].includes(t.toString()));
+        // On trie par le thème le moins utilisé pour ce tier
+        validRaThemes.sort((a, b) => tierCounters.ra[a] - tierCounters.ra[b]);
+        const assignedRa = validRaThemes[0];
+        tierCounters.ra[assignedRa]++;
+
+        // --- ALLOCATION RP (Indépendante, 1 à 6, respecte juste les exclusions) ---
+        const allRpCards = [1, 2, 3, 4, 5, 6];
+        const validRps = allRpCards.filter(c => !excludedRp[tier.toLowerCase()].includes(c.toString()));
+        // On trie pour prendre la carte RP la moins utilisée (distribution uniforme)
+        validRps.sort((a, b) => tierCounters.rp[a] - tierCounters.rp[b]);
+        const assignedRp = validRps[0];
+        tierCounters.rp[assignedRp]++;
+
+        // --- AFFICHAGE ---
+        // Photo et RA gardent leurs couleurs de thèmes
+        applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, {}, tier);
+        applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, {}, tier);
+        
+        // RP : On affiche le texte sans couleur de thème (gris neutre via theme-color-6 ou classe personnalisée)
+        const rpCell = row.querySelector('.rp-result');
+        rpCell.innerHTML = `<span class="theme-color-6">RP${assignedRp} (${tier})</span>`;
+        
+        allocationsMade++;
+    });
+});
     
     shuffleChoicesBtn.addEventListener('click', () => {
         const studiedThemes = [];
