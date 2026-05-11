@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GCSE Speaking Card Allocator</title>
-   <style>
+    <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
@@ -65,243 +65,660 @@
     <div class="container">
         <h1> 📋 GCSE Speaking Card Allocator</h1>
         
-        <div class="controls" style="padding: 20px 0; display: flex; gap: 10px; align-items: center;">
-            <button id="save-json-btn" class="setup-action-btn">💾 Save File (JSON)</button>
-            <label for="load-json-input" class="action-btn-label setup-action-btn">📂 Load File (JSON)</label>
-            <input type="file" id="load-json-input" accept=".json" style="display: none;">
-            <button id="generate-table-btn" class="setup-action-btn">🧩 Generate Table</button>
-            <button id="edit-config-btn" class="setup-action-btn" style="display: none;">✏️ Edit Config</button>
+        <div class="controls" style="padding: 20px 0; margin-bottom: 25px;">
+            <button id="save-to-file-btn" class="setup-action-btn">💾 Save Allocation to File</button>
+            <label for="load-from-file-input" class="action-btn-label setup-action-btn" style="margin-left: 10px;">📂 Load Allocation from File</label>
+            <input type="file" id="load-from-file-input" accept=".json" style="display: none;">
+            <button id="generate-table-btn" class="setup-action-btn" style="margin-left: 10px;">🧩 Generate Table</button>
+           <button id="edit-config-btn" class="setup-action-btn" style="margin-left: 10px; display: none;">✏️ Edit Config</button>
+            <span id="save-confirm-msg" class="save-confirm">Progress Saved to File!</span>
             <button id="clear-data-btn" class="clear-btn" style="margin-left: auto;">Reset Page</button>
         </div>
 
-        <div class="initial-setup-grid" id="setup-wrapper">
-            <div class="section">
+        <div class="initial-setup-grid" id="initial-setup-wrapper">
+            <div class="section" id="studied-themes-section">
                 <h2>1: Studied Themes</h2>
-                <div id="themes-grid" class="theme-grid"></div>
+                <div id="studied-themes-grid" class="theme-grid"></div>
             </div>
 
-            <div class="section">
-                <h2>2: Exclude Cards</h2>
-                <div class="exclude-grid">
-                    <div class="exclude-item"><label>FRA</label><input type="text" id="ex-ra-f"></div>
-                    <div class="exclude-item"><label>FRP</label><input type="text" id="ex-rp-f"></div>
-                    <div class="exclude-item"><label>FPT</label><input type="text" id="ex-pt-f"></div>
-                    <div class="exclude-item"><label>HRA</label><input type="text" id="ex-ra-h"></div>
-                    <div class="exclude-item"><label>HRP</label><input type="text" id="ex-rp-h"></div>
-                    <div class="exclude-item"><label>HPT</label><input type="text" id="ex-pt-h"></div>
-                </div>
+            <div class="section" id="setup-section">
+                <h2>2: RP Themes</h2>
+                <div class="rp-config-container" id="rp-config-grid"></div>
             </div>
             
-            <div class="section">
-                <h2>3: Import Students</h2>
-                <textarea id="student-input" placeholder="Exam Nbr	Tier	First	Last"></textarea>
+            <div class="section" id="exclude-cards-section">
+
+    <h2>3: Exclude Cards</h2>
+    <p>Optional : Enter cards to exclude, separated by commas (e.g., 1, 5, 9).</p>
+    <div class="exclude-grid">
+        <div class="exclude-item"><label for="exclude-ra-f-input">FRA</label><input type="text" id="exclude-ra-f-input" placeholder="e.g., 2, 6"></div>
+        <div class="exclude-item"><label for="exclude-rp-f-input">FRP</label><input type="text" id="exclude-rp-f-input" placeholder="e.g., 1, 4"></div>
+        <div class="exclude-item"><label for="exclude-pt-f-input">FPT</label><input type="text" id="exclude-pt-f-input" placeholder="e.g., 3, 8"></div>
+        <div class="exclude-item"><label for="exclude-ra-h-input">HRA</label><input type="text" id="exclude-ra-h-input" placeholder="e.g., 2, 6"></div>
+        <div class="exclude-item"><label for="exclude-rp-h-input">HRP</label><input type="text" id="exclude-rp-h-input" placeholder="e.g., 1, 4"></div>
+        <div class="exclude-item"><label for="exclude-pt-h-input">HPT</label><input type="text" id="exclude-pt-h-input" placeholder="e.g., 3, 8"></div>
+    </div>
+  </div>
+            <div class="section" id="student-import-section">
+                <h2>4: Import Students</h2>
+                <div id="student-entry-wrapper">
+                    <p>Paste from a spreadsheet or type, using Tab to separate columns (Exam Number, Tier, First Name, Last Name).</p>
+                    <textarea id="student-names-input" placeholder="Paste or type data here..."></textarea>
+                </div>
             </div>
         </div>
 
         <div class="section" id="allocation-section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2>4: Set Themes & Allocate</h2>
-                <div style="display: flex; gap: 10px;">
-                    <button id="shuffle-btn" class="shuffle-btn">🎲 Shuffle</button>
-                    <button id="allocate-btn" class="allocate-btn">⚡ AUTO-ALLOCATE</button>
-                    <button id="export-excel-btn" class="export-btn">📄 Export Excel</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-bottom: 20px;">
+                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">5: Set Themes & Allocate Cards</h2>
+                <div>
+                    <button id="shuffle-choices-btn" class="shuffle-btn">🎲 Shuffle</button>
+                    <button id="auto-allocate-btn" class="allocate-btn" style="margin-left: 10px;">⚡ AUTO-ALLOCATE</button>
+                    <button id="export-excel-btn" class="export-btn">📄 Export to Excel</button>
                 </div>
             </div>
-            <div id="error-msg" style="color: red; display: none; margin-bottom: 10px; font-weight: bold;"></div>
-            <table id="main-table">
-                <thead>
-                    <tr><th>Exam Nbr</th><th>Tier</th><th>Student Name</th><th>Choice 1</th><th>Choice 2</th><th>Selected Theme</th><th>RA</th><th>RP</th><th>PT</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            
+            <div class="alert" id="allocation-error"></div>
+            <div style="overflow-x:auto;">
+                <table id="allocation-table">
+                    <thead>
+                        <tr>
+                            <th>Exam Nbr</th>
+                            <th>Tier</th>
+                            <th>Student Name</th> <th>Choice 1</th> <th>Choice 2</th> <th>Selected Theme</th>
+                            <th>RA</th> <th>RP</th> <th>PT</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="controls" style="justify-content: flex-end; margin-top: 20px; gap: 10px;">
+                <button id="save-to-file-btn-bottom" class="setup-action-btn">💾 Save Allocation to File</button>
+                <button id="export-excel-btn-bottom" class="export-btn" style="margin-left: 0;">📄 Export to Excel</button>
+            </div>
         </div>
     </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const THEMES = { 1: "1 - Personal world", 2: "2 - Lifestyle", 3: "3 - Neighbourhood", 4: "4 - Media & Tech", 5: "5 - Study & future", 6: "6 - Travel and Tourism" };
+
+    const generateTableBtn = document.getElementById('generate-table-btn');
+    const editConfigBtn = document.getElementById('edit-config-btn');
+    const autoAllocateBtn = document.getElementById('auto-allocate-btn');
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    const exportExcelBtn = document.getElementById('export-excel-btn'); 
+    const saveToFileBtn = document.getElementById('save-to-file-btn'); 
+    const loadFromFileInput = document.getElementById('load-from-file-input'); 
+    const studentNamesInput = document.getElementById('student-names-input');
+    const shuffleChoicesBtn = document.getElementById('shuffle-choices-btn');
+    const saveToFileBtnBottom = document.getElementById('save-to-file-btn-bottom');
+    const exportExcelBtnBottom = document.getElementById('export-excel-btn-bottom');
     
-    // Elements
-    const wrapper = document.getElementById('setup-wrapper');
-    const allocSec = document.getElementById('allocation-section');
-    const tbody = document.querySelector('#main-table tbody');
-    const studentInput = document.getElementById('student-input');
+    const initialSetupWrapper = document.getElementById('initial-setup-wrapper');
+    const allocationSection = document.getElementById('allocation-section');
+    const allocationTableBody = document.querySelector('#allocation-table tbody');
+    const allocationError = document.getElementById('allocation-error');
 
-    // Initialize Themes
-    document.getElementById('themes-grid').innerHTML = Object.entries(THEMES).map(([n, name]) => 
-        `<label><input type="checkbox" class="theme-cb" value="${n}">${name}</label>`).join('');
+    const getThemeFromPhoto = (photoNum) => Math.floor((parseInt(photoNum) - 1) / 3) + 1;
+    const getThemeFromRa = (raNum) => parseInt(raNum);
 
-    // --- FUNCTION: BUILD DATA STATE FOR SAVE ---
-    function getState() {
-        const students = [];
-        tbody.querySelectorAll('tr').forEach(row => {
-            students.push({
-                id: row.cells[0].textContent,
-                tier: row.cells[1].textContent,
-                name: row.cells[2].textContent,
-                c1: row.cells[3].dataset.tid,
-                c2: row.cells[4].dataset.tid,
-                selected: row.querySelector('.sel-theme').value,
-                ra: row.querySelector('.ra-res').innerHTML,
-                rp: row.querySelector('.rp-res').innerHTML,
-                pt: row.querySelector('.pt-res').innerHTML
-            });
-        });
-        return {
-            students,
-            studied: Array.from(document.querySelectorAll('.theme-cb:checked')).map(cb => cb.value),
-            excl: {
-                ra_f: document.getElementById('ex-ra-f').value, rp_f: document.getElementById('ex-rp-f').value, pt_f: document.getElementById('ex-pt-f').value,
-                ra_h: document.getElementById('ex-ra-h').value, rp_h: document.getElementById('ex-rp-h').value, pt_h: document.getElementById('ex-pt-h').value
-            }
-        };
+    function initializeStudiedThemes() {
+        const grid = document.getElementById('studied-themes-grid');
+        grid.innerHTML = Object.entries(THEMES).map(([num, name]) => 
+            `<label><input type="checkbox" class="studied-theme-checkbox" id="studied-theme-${num}" value="${num}">${name}</label>`
+        ).join('');
     }
 
-    // --- SAVE JSON ---
-    document.getElementById('save-json-btn').addEventListener('click', () => {
-        const state = getState();
-        const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `speaking_allocation_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-    });
+    function initializeRpConfig() {
+        const rpConfigGrid = document.getElementById('rp-config-grid');
+        rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
+    }
+    
+    function buildStateObject() {
+        const state = { rpConfig: {}, students: [], rpLocked: allocationSection.style.display === 'block', studiedThemes: [], excludedCards: {} };
+        for (let i = 1; i <= 6; i++) {
+            state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
+            if (document.getElementById(`studied-theme-${i}`).checked) {
+                state.studiedThemes.push(i.toString());
+            }
+        }
+        
+        state.excludedCards.ra = { f: document.getElementById('exclude-ra-f-input').value, h: document.getElementById('exclude-ra-h-input').value };
+        state.excludedCards.rp = { f: document.getElementById('exclude-rp-f-input').value, h: document.getElementById('exclude-rp-h-input').value };
+        state.excludedCards.pt = { f: document.getElementById('exclude-pt-f-input').value, h: document.getElementById('exclude-pt-h-input').value };
 
-    // --- LOAD JSON ---
-    document.getElementById('load-json-input').addEventListener('change', (e) => {
-        const file = e.target.files[0];
+        if (allocationTableBody.innerHTML) {
+            allocationTableBody.querySelectorAll('tr').forEach(row => {
+                state.students.push({
+                    examNumber: row.cells[0].textContent,
+                    tier: row.cells[1].textContent,
+                    name: row.cells[2].textContent,
+                    choice1: row.cells[3].dataset.themeId, 
+                    choice2: row.cells[4].dataset.themeId,
+                    selected: row.querySelector('.selected-theme').value, 
+                    ra: row.querySelector('.ra-result').innerHTML, 
+                    rp: row.querySelector('.rp-result').innerHTML, 
+                    pt: row.querySelector('.photo-result').innerHTML
+                });
+            });
+        }
+        return state;
+    }
+
+    function populatePageFromState(state) {
+        if (!state) return;
+        allocationTableBody.innerHTML = '';
+        studentNamesInput.value = '';
+        allocationSection.style.display = 'none';
+        initialSetupWrapper.style.display = 'grid';
+        
+        generateTableBtn.style.display = 'inline-block';
+        editConfigBtn.style.display = 'none';
+
+        if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
+            for (let i = 1; i <= 6; i++) document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
+        }
+        if (state.studiedThemes && state.studiedThemes.length > 0) {
+            for (let i = 1; i <= 6; i++) document.getElementById(`studied-theme-${i}`).checked = false;
+            state.studiedThemes.forEach(themeNum => {
+                const checkbox = document.getElementById(`studied-theme-${themeNum}`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+        
+        if(state.excludedCards) {
+            document.getElementById('exclude-ra-f-input').value = state.excludedCards.ra?.f || '';
+            document.getElementById('exclude-ra-h-input').value = state.excludedCards.ra?.h || '';
+            document.getElementById('exclude-rp-f-input').value = state.excludedCards.rp?.f || '';
+            document.getElementById('exclude-rp-h-input').value = state.excludedCards.rp?.h || '';
+            document.getElementById('exclude-pt-f-input').value = state.excludedCards.pt?.f || '';
+            document.getElementById('exclude-pt-h-input').value = state.excludedCards.pt?.h || '';
+        }
+
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = state.rpLocked);
+
+        if (state.students && state.students.length > 0) {
+            allocationTableBody.innerHTML = state.students.map(s => {
+                const choice1 = s.choice1 || '';
+                const choice2 = s.choice2 || '';
+                return `<tr>
+                    <td class="exam-number" contenteditable="true">${s.examNumber}</td>
+                    <td class="tier" contenteditable="true">${s.tier}</td>
+                    <td class="student-name" contenteditable="true">${s.name}</td>
+                    <td class="theme-choice-1" data-theme-id="${choice1}">${THEMES[choice1] || ''}</td>
+                    <td class="theme-choice-2" data-theme-id="${choice2}">${THEMES[choice2] || ''}</td>
+                    <td><select class="selected-theme" disabled><option value="">-</option></select></td>
+                    <td class="result ra-result"></td>
+                    <td class="result rp-result"></td>
+                    <td class="result photo-result"></td>
+                </tr>`;
+            }).join('');
+
+            allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
+                const s = state.students[index];
+                if (s) {
+                    const selectedThemeDropdown = row.querySelector('.selected-theme');
+                    updateSelectedThemeForRow(row);
+                    selectedThemeDropdown.value = s.selected;
+                    colorCodeSelectedTheme(selectedThemeDropdown);
+                    row.querySelector('.ra-result').innerHTML = s.ra;
+                    row.querySelector('.rp-result').innerHTML = s.rp;
+                    row.querySelector('.photo-result').innerHTML = s.pt;
+                }
+            });
+
+            initialSetupWrapper.style.display = 'none';
+            allocationSection.style.display = 'block';
+            generateTableBtn.style.display = 'none';
+            editConfigBtn.style.display = 'inline-block';
+            addTableEventListeners();
+        }
+    }
+
+    function exportToExcel() {
+        const themeColors = {'theme-color-1':'#aed6f1','theme-color-2':'#a2d9ab','theme-color-3':'#f7dc6f','theme-color-4':'#d2b4de','theme-color-5':'#f1948a','theme-color-6':'#dfdfdf'};
+        const table = document.getElementById('allocation-table');
+        const tableClone = table.cloneNode(true);
+        const originalRows = table.querySelectorAll('tbody tr');
+
+        tableClone.querySelectorAll('tbody tr').forEach((clonedRow, index) => {
+            const originalRow = originalRows[index];
+            if (!originalRow) return;
+            originalRow.querySelectorAll('select').forEach(select => {
+                const cellIndex = select.parentElement.cellIndex;
+                const clonedCell = clonedRow.cells[cellIndex];
+                const selectedValue = select.value;
+                if (selectedValue && THEMES[selectedValue]) {
+                    clonedCell.textContent = THEMES[selectedValue];
+                } else {
+                    clonedCell.textContent = '';
+                }
+                if (select.classList.contains('selected-theme') && selectedValue) {
+                    clonedCell.style.backgroundColor = themeColors[`theme-color-${selectedValue}`];
+                }
+            });
+            originalRow.querySelectorAll('.result').forEach(resultCell => {
+                const cellIndex = resultCell.cellIndex;
+                const clonedCell = clonedRow.cells[cellIndex];
+                const span = resultCell.querySelector('span');
+                if (span) {
+                    clonedCell.textContent = span.textContent;
+                    for (const className of span.classList) {
+                        if (className.startsWith('theme-color-')) {
+                            clonedCell.style.backgroundColor = themeColors[className];
+                            break;
+                        }
+                    }
+                } else {
+                    clonedCell.textContent = '';
+                }
+            });
+        });
+        let tableHTML = `<html><head><meta charset='UTF-8'><style>table,th,td{border:.5pt solid black;border-collapse:collapse;padding:6px;font-family:Calibri,sans-serif;}th{background-color:#005a9c;color:white;font-weight:bold;}</style></head><body><table>${tableClone.innerHTML}</table></body></html>`;
+        const dataUri = 'data:application/vnd.ms-excel;base64,' + window.btoa(unescape(encodeURIComponent(tableHTML)));
+        const link = document.createElement("a");
+        link.href = dataUri;
+        link.download = "speaking_exam_allocations.xls";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function saveAllocationToFile() {
+        const state = buildStateObject();
+        const stateString = JSON.stringify(state, null, 2);
+        const blob = new Blob([stateString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `gcse_allocation_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        const confirmMsg = document.getElementById('save-confirm-msg');
+        confirmMsg.style.display = 'inline';
+        setTimeout(() => { confirmMsg.style.display = 'none'; }, 2000);
+    }
+
+    function loadAllocationFromFile(event) {
+        const file = event.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (event) => {
-            const data = JSON.parse(event.target.result);
-            // Restore Themes
-            document.querySelectorAll('.theme-cb').forEach(cb => cb.checked = data.studied.includes(cb.value));
-            // Restore Exclusions
-            document.getElementById('ex-ra-f').value = data.excl.ra_f; document.getElementById('ex-rp-f').value = data.excl.rp_f;
-            document.getElementById('ex-pt-f').value = data.excl.pt_f; document.getElementById('ex-ra-h').value = data.excl.ra_h;
-            document.getElementById('ex-rp-h').value = data.excl.rp_h; document.getElementById('ex-pt-h').value = data.excl.pt_h;
-            
-            // Restore Table
-            renderTable(data.students);
-            wrapper.style.display = 'none';
-            allocSec.style.display = 'block';
-            document.getElementById('generate-table-btn').style.display = 'none';
-            document.getElementById('edit-config-btn').style.display = 'inline-block';
+        reader.onload = function(e) {
+            const content = e.target.result;
+            try {
+                const state = JSON.parse(content);
+                if (state.rpConfig) {
+                    populatePageFromState(state);
+                } else {
+                    throw new Error("Invalid file format.");
+                }
+            } catch (error) {
+                alert("Error: Could not load the file. It might be corrupted or not a valid allocation file.");
+            }
+            event.target.value = '';
         };
         reader.readAsText(file);
+    }
+
+    let rpThemeMap = {};
+    
+    generateTableBtn.addEventListener('click', () => {
+        const studiedThemes = [];
+        for (let i = 1; i <= 6; i++) {
+            if (document.getElementById(`studied-theme-${i}`).checked) {
+                studiedThemes.push(i.toString());
+            }
+        }
+        if (studiedThemes.length < 2) {
+            allocationError.textContent = 'Please select at least two "Studied Themes" in Step 1 before creating the table.';
+            allocationError.style.display = 'block';
+            return;
+        } else {
+            allocationError.style.display = 'none';
+        }
+
+        const oldData = {};
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const examNumber = row.cells[0].textContent.trim();
+            if (examNumber) oldData[examNumber] = { 
+                tier: row.cells[1].textContent.trim(),
+                name: row.cells[2].textContent.trim(),
+                choice1: row.cells[3].dataset.themeId, 
+                choice2: row.cells[4].dataset.themeId,
+                selected: row.querySelector('.selected-theme').value, 
+                ra: row.querySelector('.ra-result').innerHTML, 
+                rp: row.querySelector('.rp-result').innerHTML, 
+                pt: row.querySelector('.photo-result').innerHTML 
+            };
+        });
+
+        const lines = studentNamesInput.value.trim().split('\n');
+        const studentData = lines.map(line => {
+            const parts = line.split('\t');
+            const examNumber = (parts[0] || '').trim();
+            const tier = (parts[1] || '').trim().toUpperCase();
+            const firstName = (parts[2] || '').trim();
+            const lastName = (parts[3] || '').trim();
+            const name = `${firstName} ${lastName}`.trim();
+            return { examNumber, tier, name };
+        }).filter(s => s.name && s.examNumber && s.tier);
+
+        if (studentData.length === 0) return;
+
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = true);
+
+        const themePairs = [];
+        for (let i = 0; i < studiedThemes.length; i++) {
+            for (let j = i + 1; j < studiedThemes.length; j++) {
+                themePairs.push([studiedThemes[i], studiedThemes[j]]);
+            }
+        }
+        for (let i = themePairs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [themePairs[i], themePairs[j]] = [themePairs[j], themePairs[i]];
+        }
+        
+        allocationTableBody.innerHTML = studentData.map((s, index) => {
+            const savedStudent = oldData[s.examNumber];
+            let choice1, choice2;
+
+            const choicesAreValid = savedStudent &&
+                                    studiedThemes.includes(savedStudent.choice1) &&
+                                    studiedThemes.includes(savedStudent.choice2);
+
+            if (choicesAreValid) {
+                choice1 = savedStudent.choice1;
+                choice2 = savedStudent.choice2;
+            } else {
+                const pair = themePairs[index % themePairs.length];
+                [choice1, choice2] = Math.random() < 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+            }
+
+            return `<tr>
+                <td class="exam-number" contenteditable="true">${s.examNumber}</td>
+                <td class="tier" contenteditable="true">${s.tier}</td>
+                <td class="student-name" contenteditable="true">${s.name}</td>
+                <td class="theme-choice-1" data-theme-id="${choice1}">${THEMES[choice1]}</td>
+                <td class="theme-choice-2" data-theme-id="${choice2}">${THEMES[choice2]}</td>
+                <td><select class="selected-theme" disabled><option value="">-</option></select></td>
+                <td class="result ra-result"></td>
+                <td class="result rp-result"></td>
+                <td class="result photo-result"></td>
+            </tr>`;
+        }).join('');
+        
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            const examNumber = row.cells[0].textContent.trim();
+            const saved = oldData[examNumber];
+            if (saved) {
+                const selectedThemeDropdown = row.querySelector('.selected-theme');
+                updateSelectedThemeForRow(row);
+                
+                const newChoice1 = row.cells[3].dataset.themeId;
+                const newChoice2 = row.cells[4].dataset.themeId;
+                if(saved.selected && (saved.selected === newChoice1 || saved.selected === newChoice2)) {
+                    selectedThemeDropdown.value = saved.selected;
+                }
+                colorCodeSelectedTheme(selectedThemeDropdown);
+                
+                const newTier = row.cells[1].textContent.trim().toUpperCase();
+                if (newTier === saved.tier.toUpperCase() && selectedThemeDropdown.value) {
+                    row.querySelector('.ra-result').innerHTML = saved.ra; 
+                    row.querySelector('.rp-result').innerHTML = saved.rp; 
+                    row.querySelector('.photo-result').innerHTML = saved.pt;
+                }
+            } else {
+                updateSelectedThemeForRow(row);
+            }
+        });
+
+        initialSetupWrapper.style.display = 'none';
+        allocationSection.style.display = 'block';
+        generateTableBtn.style.display = 'none';
+        editConfigBtn.style.display = 'inline-block';
+        addTableEventListeners();
     });
 
-    function renderTable(studentData) {
-        tbody.innerHTML = studentData.map(s => `
-            <tr class="${s.selected ? 'theme-color-' + s.selected : ''}">
-                <td contenteditable="true">${s.id}</td><td contenteditable="true">${s.tier}</td><td contenteditable="true">${s.name}</td>
-                <td data-tid="${s.c1}">${THEMES[s.c1]}</td><td data-tid="${s.c2}">${THEMES[s.c2]}</td>
-                <td><select class="sel-theme">
-                    <option value="">Select...</option>
-                    <option value="${s.c1}" ${s.selected==s.c1?'selected':''}>${THEMES[s.c1]}</option>
-                    <option value="${s.c2}" ${s.selected==s.c2?'selected':''}>${THEMES[s.c2]}</option>
-                </select></td>
-                <td class="result ra-res">${s.ra || ''}</td><td class="result rp-res">${s.rp || ''}</td><td class="result pt-res">${s.pt || ''}</td>
-            </tr>`).join('');
+    editConfigBtn.addEventListener('click', () => {
+        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = false);
         
-        tbody.querySelectorAll('.sel-theme').forEach(sel => {
-            sel.addEventListener('change', (e) => {
-                const row = e.target.closest('tr');
-                row.className = e.target.value ? `theme-color-${e.target.value}` : '';
+        const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
+            const examNumber = row.cells[0].textContent.trim();
+            const tier = row.cells[1].textContent.trim();
+            const name = row.cells[2].textContent.trim();
+            return `${examNumber}\t${tier}\t${name}`;
+        }).join('\n');
+        studentNamesInput.value = currentData;
+        
+        allocationSection.style.display = 'none';
+        initialSetupWrapper.style.display = 'grid';
+        generateTableBtn.style.display = 'inline-block';
+        editConfigBtn.style.display = 'none';
+    });
+    
+    function colorCodeSelectedTheme(selectElement) {
+        const cell = selectElement.parentElement;
+        for (let i = 1; i <= 6; i++) {
+            cell.classList.remove(`theme-color-${i}`);
+        }
+        const themeNum = selectElement.value;
+        if (themeNum) {
+            cell.classList.add(`theme-color-${themeNum}`);
+        }
+    }
+    
+    function updateSelectedThemeForRow(row) {
+        const val1 = row.cells[3].dataset.themeId;
+        const val2 = row.cells[4].dataset.themeId;
+        const selected = row.querySelector('.selected-theme');
+        
+        selected.disabled = true; 
+        selected.innerHTML = '<option value="">-</option>';
+        colorCodeSelectedTheme(selected);
+
+        if (val1 && val2 && val1 !== val2) {
+            selected.innerHTML = `<option value="">Select...</option><option value="${val1}">${THEMES[val1]}</option><option value="${val2}">${THEMES[val2]}</option>`;
+            selected.disabled = false;
+        }
+    }
+
+    function addTableEventListeners() {
+        allocationTableBody.querySelectorAll('tr').forEach(row => {
+            row.querySelector('.selected-theme').addEventListener('change', (e) => {
+                colorCodeSelectedTheme(e.target);
+                row.querySelector('.ra-result').innerHTML = '';
+                row.querySelector('.rp-result').innerHTML = '';
+                row.querySelector('.photo-result').innerHTML = '';
+            });
+
+            const tierCell = row.cells[1];
+            let initialTierValue = '';
+            tierCell.addEventListener('focus', () => {
+                initialTierValue = tierCell.textContent.trim().toUpperCase();
+            });
+            tierCell.addEventListener('blur', () => {
+                const currentTierValue = tierCell.textContent.trim().toUpperCase();
+                if (initialTierValue && initialTierValue !== currentTierValue && row.querySelector('.ra-result span')) {
+                    row.querySelector('.ra-result').innerHTML = '';
+                    row.querySelector('.rp-result').innerHTML = '';
+                    row.querySelector('.photo-result').innerHTML = '';
+                }
             });
         });
     }
 
-    // --- GENERATE TABLE ---
-    document.getElementById('generate-table-btn').addEventListener('click', () => {
-        const studied = Array.from(document.querySelectorAll('.theme-cb:checked')).map(cb => cb.value);
-        if (studied.length < 2) return alert("Select at least 2 themes.");
-        const lines = studentInput.value.trim().split('\n');
-        const students = lines.map(line => {
-            const p = line.split('\t');
-            const pairs = [];
-            for(let i=0; i<studied.length; i++) for(let j=i+1; j<studied.length; j++) pairs.push([studied[i], studied[j]]);
-            const myPair = pairs[Math.floor(Math.random() * pairs.length)];
-            return { id: (p[0]||'').trim(), tier: (p[1]||'').trim().toUpperCase(), name: `${p[2]||''} ${p[3]||''}`.trim(), c1: myPair[0], c2: myPair[1], selected: '' };
-        }).filter(s => s.name && s.id);
-        renderTable(students);
-        wrapper.style.display = 'none';
-        allocSec.style.display = 'block';
-        document.getElementById('generate-table-btn').style.display = 'none';
-        document.getElementById('edit-config-btn').style.display = 'inline-block';
-    });
+    function applyCardColor(cell, cardText, currentRpThemeMap, tier) {
+        cell.innerHTML = '';
+        if (!cardText) return;
+        const cardNum = parseInt(cardText.match(/\d+/)[0]);
+        let themeNum = 0;
+        if (cardText.startsWith('PT')) themeNum = getThemeFromPhoto(cardNum);
+        else if (cardText.startsWith('RA')) themeNum = getThemeFromRa(cardNum);
+        else if (cardText.startsWith('RP')) themeNum = currentRpThemeMap[cardNum];
+        if (themeNum > 0) cell.innerHTML = `<span class="theme-color-${themeNum}">${cardText} (${tier})</span>`;
+    }
 
-    // --- AUTO ALLOCATE ---
-    document.getElementById('allocate-btn').addEventListener('click', () => {
-        const err = document.getElementById('error-msg'); err.style.display = 'none';
-        const counters = { H: { ra: {}, rp: {}, pt: {} }, F: { ra: {}, rp: {}, pt: {} } };
-        [1,2,3,4,5,6].forEach(n => { ['H','F'].forEach(t => { counters[t].ra[n]=0; counters[t].rp[n]=0; counters[t].pt[n]=0; })});
-        const getEx = (id) => document.getElementById(id).value.split(',').map(s => s.trim()).filter(Boolean);
-        const excl = {
-            H: { ra: getEx('ex-ra-h'), rp: getEx('ex-rp-h'), pt: getEx('ex-pt-h') },
-            F: { ra: getEx('ex-ra-f'), rp: getEx('ex-rp-f'), pt: getEx('ex-pt-f') }
+    autoAllocateBtn.addEventListener('click', () => {
+       
+        allocationTableBody.querySelectorAll('tr .result').forEach(cell => cell.innerHTML = '');
+
+        for (let i = 1; i <= 6; i++) rpThemeMap[i] = parseInt(document.getElementById(`rp-theme-${i}`).value);
+        allocationError.style.display = 'none';
+
+        const excludedRa = {
+            f: document.getElementById('exclude-ra-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+            h: document.getElementById('exclude-ra-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+        };
+        const excludedRp = {
+            f: document.getElementById('exclude-rp-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+            h: document.getElementById('exclude-rp-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
+        };
+        const excludedPt = {
+            f: document.getElementById('exclude-pt-f-input').value.split(',').map(n => n.trim()).filter(Boolean),
+            h: document.getElementById('exclude-pt-h-input').value.split(',').map(n => n.trim()).filter(Boolean)
         };
 
-        tbody.querySelectorAll('tr').forEach(row => {
+        const counters = { H: { photo: {}, ra: {}, rp: {} }, F: { photo: {}, ra: {}, rp: {} } };
+        ['H', 'F'].forEach(tier => {
+            for(let i=1; i<=6; i++) { 
+                counters[tier].photo[i] = 0; counters[tier].ra[i] = 0; counters[tier].rp[i] = 0;
+            }
+        });
+
+        const rows = Array.from(allocationTableBody.querySelectorAll('tr'));
+        let allocationsMade = 0;
+        
+        rows.forEach(row => {
+            const hasSelectedTheme = !!row.querySelector('.selected-theme').value;
+
+            if (!hasSelectedTheme) {
+                return;
+            }
+
             const tier = row.cells[1].textContent.trim().toUpperCase();
-            const selected = row.querySelector('.sel-theme').value;
-            if (!selected) return;
-            const sNum = parseInt(selected);
-            const c = counters[tier]; const ex = excl[tier];
-            const ptOpts = [(sNum-1)*3+1, (sNum-1)*3+2, (sNum-1)*3+3].filter(n => !ex.pt.includes(n.toString()));
-            const ptCard = ptOpts[c.pt[sNum]++ % ptOpts.length];
-            let aRa, aRp;
-            const vRa = [1,2,3,4,5,6].filter(n => n !== sNum && !ex.ra.includes(n.toString())).sort((a,b) => c.ra[a] - c.ra[b]);
-            const vRp = [1,2,3,4,5,6].filter(n => n !== sNum && !ex.rp.includes(n.toString())).sort((a,b) => c.rp[a] - c.rp[b]);
-            for (let ra of vRa) { for (let rp of vRp) { if (ra !== rp) { aRa = ra; aRp = rp; break; } } if (aRa) break; }
-            if (aRa && aRp) {
-                c.ra[aRa]++; c.rp[aRp]++;
-                row.querySelector('.ra-res').innerHTML = `<span class="theme-color-${aRa}">RA${aRa}</span>`;
-                row.querySelector('.rp-res').innerHTML = `<span class="theme-color-${aRp}">RP${aRp}</span>`;
-                row.querySelector('.pt-res').innerHTML = `<span class="theme-color-${sNum}">PT${ptCard}</span>`;
-            } else { err.style.display = 'block'; err.textContent = "Allocation Error: Too many exclusions or not enough themes."; }
+            if (tier !== 'H' && tier !== 'F') {
+                allocationError.textContent = `Error: Invalid tier for ${row.cells[2].textContent}. Please use 'H' or 'F'.`;
+                allocationError.style.display = 'block';
+                return;
+            };
+
+            const selectedTheme = parseInt(row.querySelector('.selected-theme').value);
+            const tierCounters = counters[tier];
+
+            const allPhotoCardsForTheme = [(selectedTheme - 1) * 3 + 1, (selectedTheme - 1) * 3 + 2, (selectedTheme - 1) * 3 + 3];
+            const validPhotoCards = allPhotoCardsForTheme.filter(c => !excludedPt[tier.toLowerCase()].includes(c.toString()));
+            if (validPhotoCards.length === 0) {
+                allocationError.textContent = `CRITICAL ERROR: All Photo Cards for Theme ${selectedTheme} are excluded for Tier ${tier}. Cannot allocate for ${row.cells[2].textContent}.`;
+                allocationError.style.display = 'block'; return;
+            }
+            const photoCard = validPhotoCards[tierCounters.photo[selectedTheme]++ % validPhotoCards.length];
+
+            let validRa = Object.keys(tierCounters.ra).filter(r => getThemeFromRa(r) !== selectedTheme && !excludedRa[tier.toLowerCase()].includes(r)).sort((a,b) => tierCounters.ra[a] - tierCounters.ra[b]);
+            let validRp = Object.keys(tierCounters.rp).filter(r => rpThemeMap[r] !== selectedTheme && !excludedRp[tier.toLowerCase()].includes(r)).sort((a,b) => tierCounters.rp[a] - tierCounters.rp[b]);
+            
+            let assignedRa, assignedRp;
+            for (const ra of validRa) {
+                for (const rp of validRp) { 
+                    if (getThemeFromRa(ra) !== rpThemeMap[rp]) { 
+                        assignedRa = ra; assignedRp = rp; break; 
+                    }
+                }
+                if (assignedRa) break;
+            }
+
+            if (!assignedRa || !assignedRp) {
+                 allocationError.textContent = `CRITICAL ERROR: Could not find a valid non-conflicting RA/RP pair for ${row.cells[2].textContent}.`;
+                 allocationError.style.display = 'block'; return;
+            }
+
+            tierCounters.ra[assignedRa]++;
+            tierCounters.rp[assignedRp]++;
+
+            applyCardColor(row.querySelector('.ra-result'), `RA${assignedRa}`, rpThemeMap, tier);
+            applyCardColor(row.querySelector('.rp-result'), `RP${assignedRp}`, rpThemeMap, tier);
+            applyCardColor(row.querySelector('.photo-result'), `PT${photoCard}`, rpThemeMap, tier);
+            allocationsMade++;
+        });
+
+        if (allocationsMade === 0) {
+            allocationError.textContent = 'No students had a selected theme. Please make selections before allocating cards.';
+            allocationError.style.display = 'block';
+        }
+    });
+    
+    shuffleChoicesBtn.addEventListener('click', () => {
+        const studiedThemes = [];
+        document.querySelectorAll('.studied-theme-checkbox:checked').forEach(cb => studiedThemes.push(cb.value));
+
+        if (studiedThemes.length < 2) {
+            alert('Cannot shuffle because fewer than two themes are selected in the config.');
+            return;
+        }
+
+        const themePairs = [];
+        for (let i = 0; i < studiedThemes.length; i++) {
+            for (let j = i + 1; j < studiedThemes.length; j++) {
+                themePairs.push([studiedThemes[i], studiedThemes[j]]);
+            }
+        }
+        for (let i = themePairs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [themePairs[i], themePairs[j]] = [themePairs[j], themePairs[i]];
+        }
+
+        allocationTableBody.querySelectorAll('tr').forEach((row, index) => {
+            const selectedDropdown = row.querySelector('.selected-theme');
+            const previousSelection = selectedDropdown.value;
+            
+            const pair = themePairs[index % themePairs.length];
+            const [choice1, choice2] = Math.random() < 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+
+            row.cells[3].dataset.themeId = choice1;
+            row.cells[3].textContent = THEMES[choice1];
+            row.cells[4].dataset.themeId = choice2;
+            row.cells[4].textContent = THEMES[choice2];
+
+            updateSelectedThemeForRow(row);
+
+            if (previousSelection && (previousSelection === choice1 || previousSelection === choice2)) {
+                selectedDropdown.value = previousSelection;
+            } else {
+                selectedDropdown.value = '';
+                row.querySelector('.ra-result').innerHTML = '';
+                row.querySelector('.rp-result').innerHTML = '';
+                row.querySelector('.photo-result').innerHTML = '';
+            }
+            colorCodeSelectedTheme(selectedDropdown);
         });
     });
 
-    // --- SHUFFLE ---
-    document.getElementById('shuffle-btn').addEventListener('click', () => {
-        const studied = Array.from(document.querySelectorAll('.theme-cb:checked')).map(cb => cb.value);
-        const pairs = [];
-        for(let i=0; i<studied.length; i++) for(let j=i+1; j<studied.length; j++) pairs.push([studied[i], studied[j]]);
-        tbody.querySelectorAll('tr').forEach(row => {
-            const p = pairs[Math.floor(Math.random() * pairs.length)];
-            const [c1, c2] = Math.random() > 0.5 ? [p[0], p[1]] : [p[1], p[0]];
-            row.cells[3].dataset.tid = c1; row.cells[3].textContent = THEMES[c1];
-            row.cells[4].dataset.tid = c2; row.cells[4].textContent = THEMES[c2];
-            const sel = row.querySelector('.sel-theme');
-            sel.innerHTML = `<option value="">Select...</option><option value="${c1}">${THEMES[c1]}</option><option value="${c2}">${THEMES[c2]}</option>`;
-            row.className = ''; row.querySelectorAll('.result').forEach(r => r.innerHTML = '');
-        });
+    exportExcelBtn.addEventListener('click', exportToExcel);
+    saveToFileBtn.addEventListener('click', saveAllocationToFile);
+    loadFromFileInput.addEventListener('change', loadAllocationFromFile);
+    clearDataBtn.addEventListener('click', () => {
+        if (confirm("Are you sure? This will clear the page.")) {
+            window.location.reload();
+        }
+    });
+    studentNamesInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 1;
+        }
     });
 
-    // --- EXPORT EXCEL ---
-    document.getElementById('export-excel-btn').addEventListener('click', () => {
-        let html = "<html><head><meta charset='UTF-8'><style>table,th,td{border:1px solid black;border-collapse:collapse;padding:5px;}</style></head><body><table>";
-        html += "<tr><th>Exam Nbr</th><th>Tier</th><th>Name</th><th>Selected</th><th>RA</th><th>RP</th><th>PT</th></tr>";
-        tbody.querySelectorAll('tr').forEach(row => {
-            const selVal = row.querySelector('.sel-theme').value;
-            html += `<tr><td>${row.cells[0].textContent}</td><td>${row.cells[1].textContent}</td><td>${row.cells[2].textContent}</td>
-            <td>${selVal ? THEMES[selVal] : ''}</td><td>${row.querySelector('.ra-res').textContent}</td>
-            <td>${row.querySelector('.rp-res').textContent}</td><td>${row.querySelector('.pt-res').textContent}</td></tr>`;
-        });
-        html += "</table></body></html>";
-        const blob = new Blob([html], {type: 'application/vnd.ms-excel'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'allocation.xls'; a.click();
-    });
+    saveToFileBtnBottom.addEventListener('click', saveAllocationToFile);
+    exportExcelBtnBottom.addEventListener('click', exportToExcel);
 
-    document.getElementById('edit-config-btn').addEventListener('click', () => {
-        wrapper.style.display = 'grid'; allocSec.style.display = 'none';
-        document.getElementById('generate-table-btn').style.display = 'inline-block';
-        document.getElementById('edit-config-btn').style.display = 'none';
-    });
-
-    document.getElementById('clear-data-btn').addEventListener('click', () => { if(confirm("Reset?")) window.location.reload(); });
+    initializeStudiedThemes();
+    initializeRpConfig();
 });
 </script>
+
 </body>
 </html>
