@@ -4,32 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GCSE Speaking Card Allocator</title>
-    <style>
+     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1, h2 { color: #005a9c; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
         .section { background-color: #fdfdfd; border: 1px solid #dee2e6; border-radius: 5px; padding: 20px; }
-        .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .config-grid, .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .theme-grid label { display: flex; align-items: center; gap: 8px; font-weight: normal; }
+        .theme-grid input { width: 1.3em; height: 1.3em; }
+        /* MODIFIED: Reduced min-width to allow four columns on smaller screens */
         .initial-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 25px; }
         label { font-weight: 600; margin-bottom: 5px; display: block; }
-        input[type="text"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        input[type="text"], select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 100%; box-sizing: border-box; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-family: monospace; min-height: 150px; }
-        button, .action-btn-label { display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+        button, .action-btn-label {
+            display: inline-block; padding: 12px 20px; margin: 0; font-family: inherit; font-size: 1rem; font-weight: bold; line-height: 1.5; color: #fff; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; text-align: center; vertical-align: middle; transition: background-color 0.2s; box-sizing: border-box;
+        }
         button:hover, .action-btn-label:hover { background-color: #0056b3; }
+        .action-btn { background-color: #28a745; }
+        .action-btn:hover { background-color: #218838; }
+        .edit-btn { background-color: #ffc107; color: #212529; }
+        .edit-btn:hover { background-color: #e0a800; }
         .allocate-btn { background-color: #ff8c00; }
-        .export-btn { background-color: #17a2b8; }
-        .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; }
-        .shuffle-btn { background-color: #5856d6; }
-        .setup-action-btn { background-color: #e9ecef; color: #212529; }
+        .export-btn { background-color: #17a2b8; margin-left: 10px; }
+        .clear-btn { background-color: #dc3545; font-size: 0.8rem; padding: 5px 10px; margin-top: 10px; }
+        .shuffle-btn { background-color: #5856d6; margin-left: 10px; }
+        .shuffle-btn:hover { background-color: #4c4aa8; }
+        .alert { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
+        .save-confirm { color: #155724; font-weight: bold; margin-left: 15px; display: none; }
+        .setup-action-btn { background-color: #e9ecef; color: #212529; font-weight: bold; }
+        .setup-action-btn:hover { background-color: #ced4da; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; }
         th { background-color: #005a9c; color: white; }
         tr:nth-child(even) { background-color: #f2f2f2; }
-        .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; border: 1px solid rgba(0,0,0,0.1); }
+        .controls { display: flex; align-items: center; flex-wrap: wrap; }
+        .student-name[contenteditable]:focus, .exam-number[contenteditable]:focus, .tier[contenteditable]:focus { background-color: #fff2cc; outline: 2px solid #ffc107; }
+        .result span { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; color: #333; border: 1px solid rgba(0,0,0,0.1); }
         .theme-color-1 { background-color: #aed6f1; } .theme-color-2 { background-color: #a2d9ab; } .theme-color-3 { background-color: #f7dc6f; } .theme-color-4 { background-color: #d2b4de; } .theme-color-5 { background-color: #f1948a; } .theme-color-6 { background-color: #dfdfdf; }
-        .exclude-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
-        .exclude-item { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        
+        .rp-config-item { display: flex; align-items: center; gap: 10px; }
+        .rp-config-item label { display: inline-block; margin-bottom: 0; flex-shrink: 0; }
+        .rp-config-item select { width: auto; flex-grow: 1; }
+        .rp-config-container { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .exclude-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-auto-flow: column;
+    gap: 10px 40px;
+}
+        .exclude-column { display: flex; flex-direction: column; gap: 15px; }
+        .exclude-item { display: flex; align-items: center; gap: 10px; }
+        .exclude-item label { margin-bottom: 0; white-space: nowrap; flex-shrink: 0;}
+        .exclude-item input { max-width: 150px; }
     </style>
 </head>
 <body>
