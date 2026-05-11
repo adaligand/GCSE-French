@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCSE Speaking Card Allocator</title>
+    <title>GCSE  Card Allocator</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 20px; }
         .container { width: 95%; max-width: 1400px; margin:auto; background-color: #fff; padding: 5px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -170,19 +170,27 @@ document.addEventListener('DOMContentLoaded', () => {
         rpConfigGrid.innerHTML = Array.from({length: 6}, (_, i) => `<div class="rp-config-item"><label for="rp-theme-${i+1}">RP ${i+1}</label><select id="rp-theme-${i+1}">${Object.entries(THEMES).map(([num, name]) => `<option value="${num}">${name}</option>`).join('')}</select></div>`).join('');
     }
     
-    function buildStateObject() {
-        const state = { rpConfig: {}, students: [], rpLocked: allocationSection.style.display === 'block', studiedThemes: [], excludedCards: {} };
+  function buildStateObject() {
+        const state = { 
+            students: [], 
+            rpLocked: allocationSection.style.display === 'block', 
+            studiedThemes: [], 
+            excludedCards: {} 
+        };
+        
+        // On récupère les thèmes étudiés cochés
         for (let i = 1; i <= 6; i++) {
-            state.rpConfig[i] = document.getElementById(`rp-theme-${i}`).value;
             if (document.getElementById(`studied-theme-${i}`).checked) {
                 state.studiedThemes.push(i.toString());
             }
         }
         
+        // On récupère les exclusions
         state.excludedCards.ra = { f: document.getElementById('exclude-ra-f-input').value, h: document.getElementById('exclude-ra-h-input').value };
         state.excludedCards.rp = { f: document.getElementById('exclude-rp-f-input').value, h: document.getElementById('exclude-rp-h-input').value };
         state.excludedCards.pt = { f: document.getElementById('exclude-pt-f-input').value, h: document.getElementById('exclude-pt-h-input').value };
 
+        // On récupère les données du tableau
         if (allocationTableBody.innerHTML) {
             allocationTableBody.querySelectorAll('tr').forEach(row => {
                 state.students.push({
@@ -211,10 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         generateTableBtn.style.display = 'inline-block';
         editConfigBtn.style.display = 'none';
 
-        if (state.rpConfig && Object.keys(state.rpConfig).length > 0) {
-            for (let i = 1; i <= 6; i++) document.getElementById(`rp-theme-${i}`).value = state.rpConfig[i];
-        }
-        if (state.studiedThemes && state.studiedThemes.length > 0) {
+               if (state.studiedThemes && state.studiedThemes.length > 0) {
             for (let i = 1; i <= 6; i++) document.getElementById(`studied-theme-${i}`).checked = false;
             state.studiedThemes.forEach(themeNum => {
                 const checkbox = document.getElementById(`studied-theme-${themeNum}`);
@@ -231,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('exclude-pt-h-input').value = state.excludedCards.pt?.h || '';
         }
 
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = state.rpLocked);
+       document.querySelectorAll('#studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = state.rpLocked);
 
         if (state.students && state.students.length > 0) {
             allocationTableBody.innerHTML = state.students.map(s => {
@@ -477,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     editConfigBtn.addEventListener('click', () => {
-        document.querySelectorAll('#rp-config-grid select, #studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = false);
+   document.querySelectorAll('#studied-themes-grid input, #exclude-cards-section input').forEach(el => el.disabled = false);
         
         const currentData = Array.from(allocationTableBody.querySelectorAll('tr')).map(row => {
             const examNumber = row.cells[0].textContent.trim();
